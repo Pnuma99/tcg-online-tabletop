@@ -67,7 +67,7 @@ $('browseDiscard').onclick=()=>{
 };
 $('recycle').onclick=()=>act('recycle');
 $('cleanup').onclick=()=>{if(confirm('Alle eigenen Helden zurücklegen, Magiefeld und Hand aufräumen und alle Magiekarten ins Deck mischen?'))act('cleanup',{confirm:true})};
-$('close').onclick=()=>$('cardDialog').close();$('end').onclick=()=>act('endTurn');$('draw').onclick=()=>act('draw');$('shuffle').onclick=()=>act('shuffle');$('energyMinus').onclick=()=>act('energy',{player:seat,amount:-1});$('energyPlus').onclick=()=>act('energy',{player:seat,amount:1});$('maxPlus').onclick=()=>act('maxEnergy',{player:seat,amount:1});
+$('close').onclick=()=>$('cardDialog').close();$('end').onclick=()=>act('endTurn');$('draw').onclick=()=>act('draw');$('shuffle').onclick=()=>act('shuffle');$('energyMinus').onclick=()=>act('energy',{player:seat,amount:-1});$('energyPlus').onclick=()=>act('energy',{player:seat,amount:1});
 // Convert large iPhone photos to compact WebP/JPEG before sending them to the room.
 // Server currently limits each data URL to 650,000 characters; keep well below that.
 async function compressCard(file){
@@ -121,4 +121,6 @@ $('files').onchange=async e=>{
   }finally{input.disabled=false;input.value=''}
 };
 
-$('roll20').onclick=()=>act('roll',{sides:20});$('rollCustom').onclick=()=>{const sides=prompt('Würfel-Seitenzahl','6');if(sides!==null)act('roll',{sides:Number(sides)})};$('setEnergy').onclick=()=>{const v=prompt('Energie direkt setzen',state.players[seat].energy);if(v!==null)act('setEnergy',{player:seat,stat:'energy',value:Number(v)})};$('setMaxEnergy').onclick=()=>{const v=prompt('Maximale Energie direkt setzen',state.players[seat].maxEnergy);if(v!==null)act('setEnergy',{player:seat,stat:'maxEnergy',value:Number(v)})};$('playerCounter').onclick=()=>{const name=prompt('Name des Spieler-Counters');if(!name)return;const value=prompt('Wert (auch negativ)','1');if(value!==null)act('counter',{player:seat,scope:'player',name,value:Number(value)})};
+$('roll20').onclick=()=>act('roll',{sides:20});$('setEnergy').onclick=()=>{const v=prompt('Energie direkt setzen',state.players[seat].energy);if(v!==null)act('setEnergy',{player:seat,stat:'energy',value:Number(v)})};$('setMaxEnergy').onclick=()=>{const v=prompt('Maximale Energie direkt setzen',state.players[seat].maxEnergy);if(v!==null)act('setEnergy',{player:seat,stat:'maxEnergy',value:Number(v)})};
+
+window.addEventListener('error',e=>{console.error('TCG Fehler:',e.message);toast('App-Fehler: '+e.message)});
