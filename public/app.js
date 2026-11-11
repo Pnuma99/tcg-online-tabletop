@@ -16,6 +16,57 @@ function openHero(player,slot,h){const x={player,slot};showDialog(h.name,h.image
 ...(h.statuses||[]).map(e=>['Entfernen: '+e.name+' ('+(e.amount>0?'+':'')+e.amount+')',()=>act('removeStatus',{...x,statusId:e.id})]),
 ['−1 Schaden',()=>act('damage',{...x,amount:1})],['−3 Schaden',()=>act('damage',{...x,amount:3})],['+2 Heilung',()=>act('heal',{...x,amount:2})],['+1 Rüstung',()=>act('armor',{...x,amount:1})],['−1 Rüstung',()=>act('armor',{...x,amount:-1})],['Aktiv / Erschöpft',()=>act('exhaust',x)],...(player===seat?[['Bewegen',()=>{let v=prompt('Neue Position (1–3 Front, 4–6 Rück):');if(v)act('move',{...x,to:Number(v)-1})}]]:[])])}
 $('close').onclick=()=>$('cardDialog').close();$('end').onclick=()=>act('endTurn');$('draw').onclick=()=>act('draw');$('shuffle').onclick=()=>act('shuffle');$('energyMinus').onclick=()=>act('energy',{player:seat,amount:-1});$('energyPlus').onclick=()=>act('energy',{player:seat,amount:1});$('maxPlus').onclick=()=>act('maxEnergy',{player:seat,amount:1});
-$('files').onchange=async e=>{const files=[...e.target.files];if(files.length>30)return toast('Maximal 30 Karten pro Import');const cards=[];for(const f of files){if(f.size>450000){toast(f.name+' ist zu groß (max. 450 KB)');continue}let image=await new Promise(resolve=>{let r=new FileReader();r.onload=()=>resolve(r.result);r.readAsDataURL(f)});cards.push({name:f.name.replace(/\.[^.]+$/,''),image,type:$('cardType').value,attack:Number($('attack').value),hp:Number($('hp').value)})}if(cards.length)act('import',{cards});e.target.value=''};
+// Convert large iPhone photos to compact WebP/JPEG before sending them to the room.
+// Server currently limits each data URL to 650,000 characters; keep well below that.
+async function compressCard(file){
+  if(!file.type.startsWith('image/'))throw Error('Keine Bilddatei');
+  const source=await createImageBitmap(file);
+  try{
+    for(const height of [1100,950,800,650,500]){
+      const ratio=Math.min(1,height/source.height,850/source.width);
+      const canvas=document.createElement('canvas');
+      canvas.width=Math.max(1,Math.round(source.width*ratio));
+      canvas.height=Math.max(1,Math.round(source.height*ratio));
+      const ctx=canvas.getContext('2d',{alpha:false});
+      if(!ctx)throw Error('Bildverarbeitung nicht verfügbar');
+      ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+      ctx.drawImage(source,0,0,canvas.width,canvas.height);
+      for(const quality of [.85,.73,.60,.48,.35]){
+        const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/webp',quality));
+        const output=blob?.type==='image/webp'?blob:await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',quality));
+        if(!output)throw Error('Komprimierung fehlgeschlagen');
+        if(output.size<=380000){
+          return await new Promise((resolve,reject)=>{
+            const reader=new FileReader();reader.onload=()=>resolve(reader.result);
+            reader.onerror=()=>reject(Error('Bild konnte nicht gelesen werden'));
+            reader.readAsDataURL(output);
+          });
+        }
+      }
+    }
+    throw Error('Bild ist nach Komprimierung noch zu groß');
+  }finally{source.close?.()}
+}
+$('files').onchange=async e=>{
+  const input=e.target;const files=[...input.files];
+  if(files.length>30){toast('Maximal 30 Karten pro Import');input.value='';return}
+  const type=$('cardType').value,attack=Number($('attack').value),hp=Number($('hp').value);
+  input.disabled=true;
+  let done=0,failed=0;
+  try{
+    for(const f of files){
+      toast(`Karte ${done+failed+1}/${files.length} wird komprimiert …`);
+      try{
+        const image=await compressCard(f);
+        // Send cards separately to avoid oversized WebSocket messages.
+        act('import',{cards:[{name:f.name.replace(/\.[^.]+$/,''),image,type,attack,hp}]});
+        done++;
+      }catch(err){failed++;toast(`${f.name}: ${err.message}`)}
+      await new Promise(resolve=>setTimeout(resolve,120));
+    }
+    toast(`${done} Karte(n) importiert${failed?`, ${failed} fehlgeschlagen`:''}`);
+  }finally{input.disabled=false;input.value=''}
+};
 
 $('roll20').onclick=()=>act('roll',{sides:20});$('rollCustom').onclick=()=>{const sides=prompt('Würfel-Seitenzahl','6');if(sides!==null)act('roll',{sides:Number(sides)})};$('setEnergy').onclick=()=>{const v=prompt('Energie direkt setzen',state.players[seat].energy);if(v!==null)act('setEnergy',{player:seat,stat:'energy',value:Number(v)})};$('setMaxEnergy').onclick=()=>{const v=prompt('Maximale Energie direkt setzen',state.players[seat].maxEnergy);if(v!==null)act('setEnergy',{player:seat,stat:'maxEnergy',value:Number(v)})};$('playerCounter').onclick=()=>{const name=prompt('Name des Spieler-Counters');if(!name)return;const value=prompt('Wert (auch negativ)','1');if(value!==null)act('counter',{player:seat,scope:'player',name,value:Number(value)})};
