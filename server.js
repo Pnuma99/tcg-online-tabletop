@@ -20,7 +20,7 @@ const makePlayer=()=>({counters:{},token:crypto.randomUUID(),socket:null,energy:
 const makeRoom=()=>({players:[makePlayer(),makePlayer()],turn:0,round:1,log:[],pending:null,emptySince:null});
 const send=(ws,obj)=>{if(ws?.readyState===WebSocket.OPEN)ws.send(JSON.stringify(obj))};
 const log=(r,s)=>{r.log.unshift(s);r.log=r.log.slice(0,35)};
-const publicCard=(c)=>({id:c.id,name:c.name,image:c.image,type:c.type,attack:c.attack,hp:c.hp,maxHp:c.maxHp,armor:c.armor,counters:c.counters||{},exhausted:c.exhausted,statuses:c.statuses||[],effectiveAttack:Math.max(0,c.attack+(c.statuses||[]).filter(x=>x.stat==='attack').reduce((n,x)=>n+x.amount,0))});
+const publicCard=(c)=>({id:c.id,name:c.name,image:c.image,type:c.type,attack:c.attack,baseAttack:c.baseAttack??c.attack,hp:c.hp,maxHp:c.maxHp,armor:c.armor,counters:c.counters||{},exhausted:c.exhausted,statuses:c.statuses||[],effectiveAttack:Math.max(0,c.attack+(c.statuses||[]).filter(x=>x.stat==='attack').reduce((n,x)=>n+x.amount,0))});
 function snapshot(r,viewer){return {type:'state',you:viewer,turn:r.turn,round:r.round,log:r.log,pending:r.pending?{kind:r.pending.kind,requester:r.pending.requester,name:r.pending.name||''}:null,players:r.players.map((p,i)=>({connected:!!p.socket&&p.socket.readyState===WebSocket.OPEN,energy:p.energy,maxEnergy:p.maxEnergy,counters:p.counters,heroes:p.heroes.map(h=>h?publicCard(h):null),heroPool:p.heroPool.map(publicCard),activeSpell:p.activeSpell?publicCard(p.activeSpell):null,hand:i===viewer?p.hand.map(publicCard):Array(p.hand.length).fill(null),deckCount:p.deck.length,discard:p.discard.map(publicCard)}))}}
 function broadcast(r){r.players.forEach((p,i)=>send(p.socket,snapshot(r,i)))}
 const bounded=(v,min,max)=>Math.max(min,Math.min(max,Number.isFinite(Number(v))?Math.trunc(Number(v)):min));
@@ -63,7 +63,14 @@ function action(r,who,m){const p=r.players[who],op=r.players[1-who];const target
   const [deleted]=p[zone].splice(idx,1);log(r,`Spieler ${who+1} löscht ${deleted.name}`);break;
  }
 
- case 'import': {if(!Array.isArray(m.cards)||m.cards.length>30)throw Error('Maximal 30 Karten pro Import');for(const c of m.cards){if(typeof c.name!=='string'||c.name.length>80||typeof c.image!=='string'||c.image.length>650000||!/^data:image\/(png|jpeg|webp);base64,/.test(c.image))throw Error('Ungültige Karte oder Bild zu groß');(c.type==='hero'?p.heroPool:p.deck).push({id:crypto.randomUUID(),name:c.name,image:c.image,type:c.type==='hero'?'hero':'action',attack:bounded(c.attack,0,99),hp:bounded(c.hp,1,99),maxHp:bounded(c.hp,1,99),armor:0,counters:{},exhausted:false,statuses:[]})}log(r,`Spieler ${who+1} importiert ${m.cards.length} Karten`);break}
+ case 'clearMyCards':{
+  if(p.heroes.some(Boolean)||p.activeSpell||p.hand.length||p.discard.length||p.deck.length||p.heroPool.length){
+   // Loading a deck resets only the owner's cards; avoid affecting the opponent.
+   p.heroes=Array(6).fill(null);p.activeSpell=null;p.deck=[];p.hand=[];p.discard=[];p.heroPool=[];
+  }
+  log(r,`Spieler ${who+1} lädt ein neues Deck`);break;
+ }
+ case 'import': {if(!Array.isArray(m.cards)||m.cards.length>30)throw Error('Maximal 30 Karten pro Import');for(const c of m.cards){if(typeof c.name!=='string'||c.name.length>80||typeof c.image!=='string'||c.image.length>650000||!/^data:image\/(png|jpeg|webp);base64,/.test(c.image))throw Error('Ungültige Karte oder Bild zu groß');(c.type==='hero'?p.heroPool:p.deck).push({id:crypto.randomUUID(),name:c.name,image:c.image,type:c.type==='hero'?'hero':'action',attack:bounded(c.attack,0,99),baseAttack:bounded(c.attack,0,99),hp:bounded(c.hp,1,99),maxHp:bounded(c.hp,1,99),armor:0,counters:{},exhausted:false,statuses:[]})}log(r,`Spieler ${who+1} importiert ${m.cards.length} Karten`);break}
  case 'shuffle':for(let i=p.deck.length-1;i>0;i--){let j=crypto.randomInt(i+1);[p.deck[i],p.deck[j]]=[p.deck[j],p.deck[i]]}log(r,`Spieler ${who+1} mischt das Deck`);break;
  case 'draw':{let n=bounded(m.count??1,1,10);while(n--&&p.deck.length)p.hand.push(p.deck.pop());log(r,`Spieler ${who+1} zieht Karten`);break}
  case 'place':{const idx=p.heroPool.findIndex(c=>c.id===m.cardId);if(idx<0)throw Error('Held nicht im Charakterstapel');if(m.player!==who)throw Error('Nur eigene Helden platzieren');if(p.heroes[slot])throw Error('Position belegt');let c=p.heroPool[idx];if(c.type!=='hero')throw Error('Nur Helden auf das Feld');p.heroes[slot]=c;p.heroPool.splice(idx,1);log(r,`Spieler ${who+1} platziert ${c.name}`);break}
