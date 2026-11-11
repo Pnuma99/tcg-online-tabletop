@@ -232,8 +232,9 @@ function renderBuilder(){
  $('builderHint').textContent=heroStage?'Bis zu 10 verschiedene Charaktere auswählen.':'Bis zu 50 Effektkarten auswählen, maximal 2 Kopien je Karte.';
  $('builderSelected').textContent=heroStage?`${builderDeck.heroes.length} / 10 Charaktere`:`${builderDeck.effects.length} / 50 Effektkarten`;
  $('builderPrevious').hidden=heroStage;$('builderNext').hidden=!heroStage;$('builderSave').hidden=heroStage;
+ $('builderUploadLabel').textContent=heroStage?'＋ Charakterkarten hochladen':'＋ Effektkarten hochladen';
  const grid=$('builderGrid');grid.replaceChildren();const cards=builderCards.filter(c=>c.type===(heroStage?'hero':'action'));
- if(!cards.length){const msg=document.createElement('p');msg.className='hint';msg.textContent='Keine passenden Karten gespeichert. Lade Karten im Kampf unter Einstellungen hoch.';grid.append(msg)}
+ if(!cards.length){const msg=document.createElement('p');msg.className='hint';msg.textContent='Noch keine passenden Karten gespeichert. Lade sie oben direkt hoch.';grid.append(msg)}
  for(const c of cards){const selected=heroStage?builderDeck.heroes.includes(c.id):countEffects(c.id)>0;const item=document.createElement('button');item.className='builder-card'+(selected?' selected':'');item.type='button';const img=document.createElement('img');img.src=c.image;img.alt=c.name;item.append(img);const label=document.createElement('span');label.textContent=c.name;item.append(label);const counter=document.createElement('b');counter.textContent=heroStage?(selected?'✓':'＋'):`${countEffects(c.id)}/2`;item.append(counter);
  item.onclick=()=>{if(heroStage){if(selected)builderDeck.heroes=builderDeck.heroes.filter(x=>x!==c.id);else if(builderDeck.heroes.length<10)builderDeck.heroes.push(c.id);else return toast('Maximal 10 Charaktere')}else{const n=countEffects(c.id);if(n>=2)builderDeck.effects.splice(builderDeck.effects.indexOf(c.id),1);else if(builderDeck.effects.length<50)builderDeck.effects.push(c.id);else return toast('Maximal 50 Effektkarten')}renderBuilder()};grid.append(item)}
 }
@@ -263,3 +264,42 @@ async function loadSavedDeck(deck){
   toast(`Deck „${deck.name}“ geladen`);
  }catch(e){toast('Laden unterbrochen: '+e.message+' (erneut laden)')}finally{$('loadDeck').disabled=false}
 }
+
+
+// Deckbuilder: import cards into the local library without a battle room.
+$('builderUploadFiles').addEventListener('change',async function(event){
+ const input=event.target,files=Array.from(input.files||[]);
+ const type=builderStage==='heroes'?'hero':'action';
+ if(files.length>30){toast('Maximal 30 Bilder gleichzeitig');input.value='';return}
+ input.disabled=true;let saved=0,failed=0,skipped=0;
+ try{
+  for(let i=0;i<files.length;i++){
+   const f=files[i];
+   const proposed=f.name.replace(/\.[^.]+$/,'').trim()||'Neue Karte';
+   const nameText=prompt(`Karte ${i+1}/${files.length} – Kartenname`,proposed);
+   if(nameText===null){skipped++;continue}
+   const name=nameText.trim();
+   if(!name||name.length>80){failed++;toast('Name muss 1–80 Zeichen haben');continue}
+   let attack=0,hp=1;
+   if(type==='hero'){
+    const a=prompt(`${name} – Angriff (0–99)`,'5');
+    if(a===null){skipped++;continue}
+    const h=prompt(`${name} – maximale Lebenspunkte (1–99)`,'15');
+    if(h===null){skipped++;continue}
+    if(!/^\d+$/.test(a.trim())||!/^\d+$/.test(h.trim())){failed++;toast('Bitte ganze Zahlen eingeben');continue}
+    attack=Number(a);hp=Number(h);
+    if(attack>99||hp<1||hp>99){failed++;toast('Ungültige Werte für '+name);continue}
+   }
+   try{
+    toast(`${name} wird gespeichert (${i+1}/${files.length}) …`);
+    const image=await compressCard(f);
+    await dbRequest('cards','readwrite',store=>store.add({name,image,type,attack,hp}));
+    saved++;
+   }catch(error){failed++;toast(`${name}: ${error.message||'Fehler'}`)}
+  }
+  builderCards=await getSaved();
+  if(builderDeck&&!$('deckEditor').hidden)renderBuilder();
+  toast(`${saved} Karte(n) gespeichert${failed?`, ${failed} fehlgeschlagen`:''}${skipped?`, ${skipped} übersprungen`:''}`);
+ }catch(error){toast('Importfehler: '+error.message)}
+ finally{input.disabled=false;input.value=''}
+});
