@@ -31,3 +31,9 @@ button{user-select:none;-webkit-user-select:none}
  .status-tags{font-size:8px;max-height:30px}
 }
 @media (max-width:700px){#lobby{margin:12px;padding:15px}}
+
+.spell-zone{display:flex;align-items:center;justify-content:center;gap:10px;border:1px solid #8b7653;background:#342f28;border-radius:8px;padding:5px;min-height:45px}
+.spell-zone .card{height:92px;width:66px}
+.piles section{border:1px solid #536b5e;border-radius:8px;margin:8px 0;padding:8px}
+.piles h3{margin:4px 0}
+@media (orientation:landscape) and (max-height:500px){.spell-zone{min-height:30px;padding:2px}.spell-zone .card{height:68px;width:49px}}
