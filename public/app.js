@@ -1,4 +1,4 @@
-const $=id=>document.getElementById(id);let ws,seat,code,state,selected=null;
+const $=id=>document.getElementById(id);let ws,seat,code,state,selected=null,openedHero=null;
 function toast(s){$('toast').textContent=s;$('toast').style.display='block';setTimeout(()=>$('toast').style.display='none',3500)}
 function send(o){if(ws?.readyState===1)ws.send(JSON.stringify(o))}function act(action,extra={}){send({type:'action',action,...extra})}
 let reconnectTimer=null,manualCode=null;
@@ -9,15 +9,15 @@ function connect(requested){
   ws.onopen=()=>send({type:'join',code:requested,token:requested?localStorage.getItem('tcg-token-'+requested):null});
   ws.onmessage=e=>{const m=JSON.parse(e.data);
     if(m.type==='error'){toast(m.message);return}
-    if(m.type==='joined'){seat=m.seat;code=m.code;manualCode=code;localStorage.setItem('tcg-token-'+code,m.token);localStorage.setItem('tcg-last-room',code);$('room').textContent='Lobby '+code+' · Spieler '+(seat+1);$('lobby').hidden=true;$('game').hidden=false;$('status').textContent='Online';if(reconnectTimer){clearTimeout(reconnectTimer);reconnectTimer=null}}
-    if(m.type==='state'){state=m;render();renderApproval()}
+    if(m.type==='joined'){seat=m.seat;code=m.code;manualCode=code;localStorage.setItem('tcg-token-'+code,m.token);localStorage.setItem('tcg-last-room',code);$('room').textContent='Lobby '+code+' · Spieler '+(seat+1);$('home').hidden=true;$('deckbuilder').hidden=true;$('lobby').hidden=true;$('game').hidden=false;$('status').textContent='Online';if(reconnectTimer){clearTimeout(reconnectTimer);reconnectTimer=null}}
+    if(m.type==='state'){state=m;render();renderApproval();refreshOpenedHero()}
     if(m.type==='notice')toast(m.message)
   };
   ws.onclose=()=>{$('status').textContent='Verbindung getrennt';if(manualCode){reconnectTimer=setTimeout(()=>connect(manualCode),3000)}};
 }
 $('join').onclick=()=>connect($('code').value.trim().toUpperCase());
-const lastRoom=localStorage.getItem('tcg-last-room');
-if(lastRoom){$('code').value=lastRoom;connect(lastRoom)}
+// Reconnect is offered when opening Kampf, not automatically on the main menu.
+const lastRoom=localStorage.getItem('tcg-last-room');if(lastRoom)$('code').value=lastRoom;
 function cardEl(c,fn){let el=document.createElement('div');el.className='card'+(c.exhausted?' exhausted':'');let img=document.createElement('img');img.src=c.image;img.alt=c.name;el.append(img);if(c.type==='hero'){let st=document.createElement('div');st.className='stats';st.textContent=`⚔ ${c.effectiveAttack??c.attack} · ♥ ${c.hp}/${c.maxHp} · 🛡 ${c.armor}`;el.append(st)}if(c.type==='hero'&&Object.keys(c.counters||{}).length){let tags=document.createElement('div');tags.className='status-tags';tags.textContent=Object.entries(c.counters).map(([k,v])=>`${k}: ${v}`).join(' | ');el.append(tags)}if(c.type==='hero'&&c.statuses?.length){let tags=document.createElement('div');tags.className='status-tags';tags.textContent=c.statuses.map(x=>`${x.name}: ${x.amount>0?'+':''}${x.amount} ${x.stat==='attack'?'ATK':x.stat==='damageBonus'?'Schaden':'Reduktion'}${x.remaining?' ('+x.remaining+')':''}`).join(' | ');el.append(tags)}el.title=c.name;el.onclick=fn;return el}
 function renderBoard(player,id){
  const target=$(id);target.replaceChildren();const p=state.players[player];
@@ -52,16 +52,55 @@ function render(){
  $('log').replaceChildren(...state.log.map(s=>{const el=document.createElement('p');el.textContent=s;return el}));
 }
 function renderApproval(){const pending=state.pending;if(!pending||pending.requester===seat){if($('confirmDialog').open)$('confirmDialog').close();return}const dialog=$('confirmDialog');$('confirmTitle').textContent='Gegner bittet um Genehmigung';$('confirmText').textContent=pending.kind==='cleanup'?'Gesamtes Spielfeld, beide Hände und Ablagestapel zurücksetzen?':`Charakter ${pending.name||''} zurück in den Charakterstapel legen?`;if(!dialog.open)dialog.showModal()}
-function showDialog(title,image,buttons){if($('cardDialog').open)$('cardDialog').close();const details=$('details');details.replaceChildren();const h=document.createElement('h3');h.textContent=title;details.append(h);if(image){const im=document.createElement('img');im.src=image;im.alt=title;im.onclick=()=>im.classList.toggle('zoomed');details.append(im)}$('actions').replaceChildren();for(const [label,fn] of buttons){const b=document.createElement('button');b.textContent=label;b.onclick=()=>{$('cardDialog').close();fn()};$('actions').append(b)}$('cardDialog').showModal()}
+function showDialog(title,image,buttons){openedHero=null;if($('cardDialog').open)$('cardDialog').close();const details=$('details');details.replaceChildren();const h=document.createElement('h3');h.textContent=title;details.append(h);if(image){const im=document.createElement('img');im.src=image;im.alt=title;im.onclick=()=>im.classList.toggle('zoomed');details.append(im)}$('actions').replaceChildren();for(const [label,fn] of buttons){const b=document.createElement('button');b.textContent=label;b.onclick=()=>{$('cardDialog').close();fn()};$('actions').append(b)}$('cardDialog').showModal()}
 function openHand(c){showDialog(c.name,c.image,[['Auf Magiefeld ausspielen',()=>act('play',{cardId:c.id})],['Karte löschen',()=>{if(confirm('Karte löschen?'))act('deleteCard',{cardId:c.id,zone:'hand'})}]] )}
-function openHero(player,slot,h){const x={player,slot};const mine=player===seat;const details=$('details');details.replaceChildren();const heading=document.createElement('h3');heading.textContent=h.name;details.append(heading);const img=document.createElement('img');img.src=h.image;img.alt=h.name;img.onclick=()=>img.classList.toggle('zoomed');details.append(img);
- for(const [label,stat,val] of [['Angriff','attack',h.attack],['KP','hp',h.hp],['Rüstung','armor',h.armor]]){
- const row=document.createElement('div');row.className='stat-row';const minus=document.createElement('button');minus.textContent='−';minus.onclick=()=>act('setStat',{...x,stat,value:val-1});const text=document.createElement('strong');text.textContent=label+' '+(stat==='attack'?`${h.effectiveAttack??val}/${h.attack}`:stat==='hp'?`${h.hp}/${h.maxHp}`:val);const plus=document.createElement('button');plus.textContent='+';plus.onclick=()=>act('setStat',{...x,stat,value:val+1});row.append(minus,text,plus);details.append(row)}
+function refreshOpenedHero(){
+ if(!openedHero||!$('cardDialog').open)return;
+ const {player,slot,id}=openedHero;
+ const current=state?.players?.[player]?.heroes?.[slot];
+ if(!current||current.id!==id){openedHero=null;$('cardDialog').close();return}
+ drawHeroMenu(player,slot,current);
+}
+function openHero(player,slot,h){
+ openedHero={player,slot,id:h.id};
+ drawHeroMenu(player,slot,h);
+ if(!$('cardDialog').open)$('cardDialog').showModal();
+}
+function drawHeroMenu(player,slot,h){
+ const x={player,slot},mine=player===seat,details=$('details');
+ details.replaceChildren();
+ const heading=document.createElement('h3');heading.textContent=h.name;details.append(heading);
+ const img=document.createElement('img');img.src=h.image;img.alt=h.name;
+ img.onclick=()=>img.classList.toggle('zoomed');details.append(img);
+ for(const [label,stat] of [['Angriff','attack'],['KP','hp'],['Rüstung','armor']]){
+  const row=document.createElement('div');row.className='stat-row';
+  const minus=document.createElement('button');minus.textContent='−';
+  const text=document.createElement('strong');
+  const current=Number(h[stat]||0);
+  text.textContent=label+' '+(stat==='attack'?`${h.effectiveAttack??current}/${h.baseAttack??current}`:stat==='hp'?`${h.hp}/${h.maxHp}`:current);
+  const plus=document.createElement('button');plus.textContent='+';
+  // Read the latest server value, not the stale value captured when the menu opened.
+  for(const [btn,delta] of [[minus,-1],[plus,1]])btn.onclick=()=>{
+   const latest=state?.players?.[player]?.heroes?.[slot];
+   if(!latest||latest.id!==h.id)return toast('Charakter nicht mehr auf diesem Feld');
+   const next=Math.max(0,Number(latest[stat]||0)+delta);
+   act('setStat',{...x,stat,value:next});
+   // Optimistic update prevents rapid taps from repeatedly sending the same value.
+   latest[stat]=next;
+   if(stat==='attack')latest.effectiveAttack=next+(latest.statuses||[]).filter(e=>e.stat==='attack').reduce((a,e)=>a+e.amount,0);
+   drawHeroMenu(player,slot,latest);
+  };
+  row.append(minus,text,plus);details.append(row);
+ }
+ const condition=document.createElement('div');condition.className='effect-chip';
+ condition.textContent=h.exhausted?'Status: Erschöpft':'Status: Aktiv';details.append(condition);
  for(const effect of h.statuses||[]){const el=document.createElement('div');el.className='effect-chip';el.textContent=`${effect.name}: ${effect.amount>0?'+':''}${effect.amount} ${effect.stat} · ${effect.remaining===0?'dauerhaft':effect.remaining+' Runden'}`;details.append(el)}
  const buttons=[['Aktiv / Erschöpft',()=>act('exhaust',x)],['Buff / Nerf hinzufügen',()=>{const name=prompt('Name des Effekts');if(!name)return;const stat=prompt('Werttyp: attack, damageBonus, damageReduction','attack');if(!stat)return;const amount=prompt('Wert, z.B. 3 oder -2','3');if(amount===null)return;const duration=prompt('Dauer in eigenen Zugenden, 0 = dauerhaft','2');if(duration===null)return;act('addStatus',{...x,name,stat,amount:Number(amount),duration:Number(duration)})}],...((h.statuses||[]).map(e=>['Effekt entfernen: '+e.name,()=>act('removeStatus',{...x,statusId:e.id})])),['Verbrennung / Gift',()=>{const kind=prompt('burn oder poison','poison');if(!kind)return;const value=prompt('Stärke','1');if(value!==null)act('condition',{...x,kind,value:Number(value)})}]];
  if(mine)buttons.push(['Bewegen',()=>{const to=prompt('Zielposition 1–3 Front, 4–6 Rück');if(to)act('move',{...x,to:Number(to)-1})}],['Zurück zum Charakterstapel (Anfrage)',()=>act('requestReturnHero',x)]);
  else buttons.push(['Angreifen',()=>{const from=prompt('Eigener Angreifer: 1–3 Front, 4–6 Rück');if(from)act('attack',{...x,from:Number(from)-1})}]);
- $('actions').replaceChildren();for(const [label,fn] of buttons){const btn=document.createElement('button');btn.textContent=label;btn.onclick=()=>{fn();$('cardDialog').close()};$('actions').append(btn)}$('cardDialog').showModal();}
+ $('actions').replaceChildren();
+ for(const [label,fn] of buttons){const btn=document.createElement('button');btn.textContent=label;btn.onclick=()=>{openedHero=null;$('cardDialog').close();fn()};$('actions').append(btn)}
+}
 function showDiscard(player){const cards=state.players[player].discard;showDialog((player===seat?'Deine':'Gegnerische')+' Ablage ('+cards.length+')',null,cards.map(c=>[c.name,()=>showDialog(c.name,c.image,player===seat?[['Karte löschen',()=>{if(confirm('Karte löschen?'))act('deleteCard',{cardId:c.id,zone:'discard'})}]]:[])]))}
 $('browseDiscard').onclick=()=>showDiscard(seat);$('enemyDiscard').onclick=()=>showDiscard(1-seat);
 $('recycle').onclick=()=>act('recycle');$('cleanup').onclick=()=>{if(confirm('Anfrage an den Gegner senden: gesamtes Spielfeld für beide Spieler zurücksetzen?'))act('requestCleanup')};
@@ -102,30 +141,52 @@ async function compressCard(file){
   }finally{source.close?.();if(objectUrl)URL.revokeObjectURL(objectUrl)}
 }
 async function importFiles(e,type){
-  const input=e.target;const files=[...input.files];
-  if(files.length>30){toast('Maximal 30 Karten pro Import');input.value='';return}
-  const attack=Number($('attack').value),hp=Number($('hp').value);
-  input.disabled=true;
-  let done=0,failed=0;
-  try{
-    for(const f of files){
-      toast(`Karte ${done+failed+1}/${files.length} wird komprimiert …`);
-      try{
-        const image=await compressCard(f);
-        // Send cards separately to avoid oversized WebSocket messages.
-        act('import',{cards:[{name:f.name.replace(/\.[^.]+$/,''),image,type,attack,hp}]});
-        await saveCard({name:f.name.replace(/\.[^.]+$/,''),image,type,attack,hp});
-        done++;
-      }catch(err){failed++;toast(`${f.name}: ${err.message}`)}
-      await new Promise(resolve=>setTimeout(resolve,120));
-    }
-    toast(`${done} Karte(n) importiert${failed?`, ${failed} fehlgeschlagen`:''}`);
-  }finally{input.disabled=false;input.value=''}
+ const input=e.target,files=[...input.files];
+ if(files.length>30){toast('Maximal 30 Karten pro Import');input.value='';return}
+ input.disabled=true;let done=0,failed=0;
+ try{
+  for(let i=0;i<files.length;i++){
+   const f=files[i],defaultName=f.name.replace(/\\.[^.]+$/,'').trim()||'Neue Karte';
+   const nameInput=prompt(`Karte ${i+1}/${files.length} – Name:`,defaultName);
+   if(nameInput===null)continue;
+   const name=nameInput.trim();
+   if(!name||name.length>80){failed++;toast('Name muss 1–80 Zeichen haben');continue}
+   let attack=0,hp=1;
+   if(type==='hero'){
+    const a=prompt(`${name} – Angriff:`,String($('attack').value||5));
+    if(a===null)continue;
+    const h=prompt(`${name} – maximale KP:`,String($('hp').value||15));
+    if(h===null)continue;
+    attack=Number(a);hp=Number(h);
+    if(!Number.isInteger(attack)||attack<0||attack>99||!Number.isInteger(hp)||hp<1||hp>99){failed++;toast('Ungültige Werte für '+name);continue}
+   }
+   toast(`Karte ${i+1}/${files.length} wird verarbeitet …`);
+   try{
+    const image=await compressCard(f);
+    if(ws?.readyState!==WebSocket.OPEN)throw Error('Keine Serververbindung');
+    // Wait for acknowledgement before storing the card in the local library.
+    await new Promise((resolve,reject)=>{
+     const timeout=setTimeout(()=>{ws.removeEventListener('message',onMessage);reject(Error('Server antwortet nicht'))},15000);
+     function onMessage(event){
+      let msg;try{msg=JSON.parse(event.data)}catch{return}
+      if(msg.type!=='state'&&msg.type!=='error')return;
+      clearTimeout(timeout);ws.removeEventListener('message',onMessage);
+      if(msg.type==='error')reject(Error(msg.message||'Import fehlgeschlagen'));else resolve();
+     }
+     ws.addEventListener('message',onMessage);
+     act('import',{cards:[{name,image,type,attack,hp}]});
+    });
+    await saveCard({name,image,type,attack,hp});
+    done++;
+   }catch(err){failed++;toast(`${name}: ${err.message}`)}
+  }
+  toast(`${done} Karte(n) importiert${failed?`, ${failed} fehlgeschlagen`:''}`);
+ }finally{input.disabled=false;input.value=''}
 }
 $('heroFiles').onchange=e=>importFiles(e,'hero');$('actionFiles').onchange=e=>importFiles(e,'action');
 
 // Browser-local library: survives refreshes, not device changes or clearing site data.
-function dbOpen(){return new Promise((resolve,reject)=>{const req=indexedDB.open('tcg-card-library',1);req.onupgradeneeded=()=>req.result.createObjectStore('cards',{keyPath:'id',autoIncrement:true});req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
+function dbOpen(){return new Promise((resolve,reject)=>{const req=indexedDB.open('tcg-card-library',2);req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains('cards'))db.createObjectStore('cards',{keyPath:'id',autoIncrement:true});if(!db.objectStoreNames.contains('decks'))db.createObjectStore('decks',{keyPath:'id'});};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
 async function saveCard(card){try{const db=await dbOpen();await new Promise((resolve,reject)=>{const tx=db.transaction('cards','readwrite');tx.objectStore('cards').add(card);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});db.close()}catch(e){toast('Karte im Spiel, lokale Speicherung fehlgeschlagen')}}
 async function getSaved(){const db=await dbOpen();const rows=await new Promise((resolve,reject)=>{const tx=db.transaction('cards','readonly');const req=tx.objectStore('cards').getAll();req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)});db.close();return rows}
 async function deleteSaved(id){const db=await dbOpen();await new Promise((resolve,reject)=>{const tx=db.transaction('cards','readwrite');tx.objectStore('cards').delete(id);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});db.close()}
@@ -142,3 +203,63 @@ $('library').onclick=async()=>{
  }catch(e){toast('Bibliothek nicht verfügbar: '+e.message)}
 };
 window.addEventListener('error',e=>{console.error('TCG Fehler:',e.message);toast('App-Fehler: '+e.message)});
+
+// ---- Main menu and local deckbuilder ----
+let builderDeck=null,builderStage='heroes',builderCards=[];
+function showPage(page){for(const id of ['home','lobby','deckbuilder','game'])$(id).hidden=id!==page;window.scrollTo(0,0)}
+$('goBattle').onclick=()=>{showPage('lobby');if(lastRoom)$('code').value=lastRoom};
+$('goBuilder').onclick=()=>{showPage('deckbuilder');showDeckList()};
+$('battleBack').onclick=()=>showPage('home');
+$('builderBack').onclick=()=>{if(!$('deckEditor').hidden){$('deckEditor').hidden=true;$('deckList').hidden=false}else showPage('home')};
+$('gameHome').onclick=()=>showPage('home');
+function dbRequest(store,mode,work){return dbOpen().then(db=>new Promise((resolve,reject)=>{const tx=db.transaction(store,mode);let result;try{result=work(tx.objectStore(store))}catch(e){db.close();reject(e);return}tx.oncomplete=()=>{db.close();resolve(result?.result)};tx.onerror=()=>{db.close();reject(tx.error)}}))}
+const getDecks=()=>dbRequest('decks','readonly',store=>store.getAll());
+const putDeck=d=>dbRequest('decks','readwrite',store=>store.put(d));
+const removeDeck=id=>dbRequest('decks','readwrite',store=>store.delete(id));
+function makeButton(label,fn){const b=document.createElement('button');b.textContent=label;b.onclick=fn;return b}
+async function showDeckList(){
+ $('deckEditor').hidden=true;$('deckList').hidden=false;const target=$('deckList');target.replaceChildren();
+ target.append(makeButton('＋ Neues Deck erstellen',()=>editDeck(null)));
+ try{const decks=await getDecks();if(!decks.length){const p=document.createElement('p');p.className='hint';p.textContent='Noch keine Decks angelegt.';target.append(p)}
+ for(const d of decks){const row=document.createElement('div');row.className='deck-row';const name=document.createElement('strong');name.textContent=d.name;const count=document.createElement('span');count.textContent=`${d.heroes.length}/10 Charaktere · ${d.effects.length}/50 Effektkarten`;row.append(name,count,makeButton('Bearbeiten',()=>editDeck(d)),makeButton('Löschen',async()=>{if(confirm(`Deck „${d.name}“ löschen?`)){await removeDeck(d.id);showDeckList()}}));target.append(row)}}catch(e){toast('Decks konnten nicht geladen werden: '+e.message)}
+}
+async function editDeck(existing){
+ try{builderCards=await getSaved();builderDeck=existing?structuredClone(existing):{id:(crypto.randomUUID?.()||String(Date.now())+'-'+Math.random()),name:'Neues Deck',heroes:[],effects:[]};builderStage='heroes';$('deckName').value=builderDeck.name;$('deckList').hidden=true;$('deckEditor').hidden=false;renderBuilder()}catch(e){toast('Kartenbibliothek nicht verfügbar: '+e.message)}
+}
+function countEffects(id){return builderDeck.effects.filter(x=>x===id).length}
+function renderBuilder(){
+ const heroStage=builderStage==='heroes';$('builderStep').textContent=heroStage?'1 / 2 · CHARAKTERE AUSWÄHLEN':'2 / 2 · EFFEKTFKARTEN AUSWÄHLEN';
+ $('builderHint').textContent=heroStage?'Bis zu 10 verschiedene Charaktere auswählen.':'Bis zu 50 Effektkarten auswählen, maximal 2 Kopien je Karte.';
+ $('builderSelected').textContent=heroStage?`${builderDeck.heroes.length} / 10 Charaktere`:`${builderDeck.effects.length} / 50 Effektkarten`;
+ $('builderPrevious').hidden=heroStage;$('builderNext').hidden=!heroStage;$('builderSave').hidden=heroStage;
+ const grid=$('builderGrid');grid.replaceChildren();const cards=builderCards.filter(c=>c.type===(heroStage?'hero':'action'));
+ if(!cards.length){const msg=document.createElement('p');msg.className='hint';msg.textContent='Keine passenden Karten gespeichert. Lade Karten im Kampf unter Einstellungen hoch.';grid.append(msg)}
+ for(const c of cards){const selected=heroStage?builderDeck.heroes.includes(c.id):countEffects(c.id)>0;const item=document.createElement('button');item.className='builder-card'+(selected?' selected':'');item.type='button';const img=document.createElement('img');img.src=c.image;img.alt=c.name;item.append(img);const label=document.createElement('span');label.textContent=c.name;item.append(label);const counter=document.createElement('b');counter.textContent=heroStage?(selected?'✓':'＋'):`${countEffects(c.id)}/2`;item.append(counter);
+ item.onclick=()=>{if(heroStage){if(selected)builderDeck.heroes=builderDeck.heroes.filter(x=>x!==c.id);else if(builderDeck.heroes.length<10)builderDeck.heroes.push(c.id);else return toast('Maximal 10 Charaktere')}else{const n=countEffects(c.id);if(n>=2)builderDeck.effects.splice(builderDeck.effects.indexOf(c.id),1);else if(builderDeck.effects.length<50)builderDeck.effects.push(c.id);else return toast('Maximal 50 Effektkarten')}renderBuilder()};grid.append(item)}
+}
+$('builderNext').onclick=()=>{builderStage='effects';renderBuilder()};$('builderPrevious').onclick=()=>{builderStage='heroes';renderBuilder()};$('builderCancel').onclick=showDeckList;
+$('builderSave').onclick=async()=>{const name=$('deckName').value.trim();if(!name)return toast('Bitte einen Decknamen eingeben');if(builderDeck.heroes.length>10||builderDeck.effects.length>50)return toast('Decklimit überschritten');builderDeck.name=name;await putDeck(builderDeck);toast('Deck gespeichert: '+name);showDeckList()};
+async function chooseDeck(){
+ if(!state||seat===undefined)return toast('Bitte zuerst einer Lobby beitreten');
+ const decks=await getDecks();if(!decks.length)return toast('Erstelle zuerst ein Deck im Deckbuilder');
+ const buttons=decks.map(d=>[`${d.name} (${d.heroes.length} Charaktere / ${d.effects.length} Effekte)`,()=>loadSavedDeck(d)]);
+ showDialog('Fertiges Deck laden',null,buttons);
+}
+$('loadDeck').onclick=()=>chooseDeck().catch(e=>toast(e.message));
+function waitForState(sendAction){return new Promise((resolve,reject)=>{
+ if(ws?.readyState!==WebSocket.OPEN)return reject(Error('Keine Serververbindung'));
+ const timeout=setTimeout(()=>{ws.removeEventListener('message',handler);reject(Error('Server antwortet nicht'))},20000);
+ function handler(e){let m;try{m=JSON.parse(e.data)}catch{return}if(m.type!=='state'&&m.type!=='error')return;clearTimeout(timeout);ws.removeEventListener('message',handler);m.type==='error'?reject(Error(m.message)):resolve()}
+ ws.addEventListener('message',handler);sendAction();
+})}
+async function loadSavedDeck(deck){
+ const cards=await getSaved();const byId=new Map(cards.map(c=>[c.id,c]));const selected=[...deck.heroes,...deck.effects].map(id=>byId.get(id));
+ if(selected.some(c=>!c))return toast('Einige Karten fehlen in der Bibliothek. Bitte Deck bearbeiten.');
+ if(!confirm(`„${deck.name}“ laden? Deine bisherigen Karten im aktuellen Raum werden ersetzt.`))return;
+ $('loadDeck').disabled=true;
+ try{
+  await waitForState(()=>act('clearMyCards'));
+  let i=0;for(const c of selected){await waitForState(()=>act('import',{cards:[{name:c.name,image:c.image,type:c.type,attack:c.attack,hp:c.hp}]}));i++;if(i%5===0||i===selected.length)toast(`Deck wird geladen: ${i}/${selected.length}`)}
+  toast(`Deck „${deck.name}“ geladen`);
+ }catch(e){toast('Laden unterbrochen: '+e.message+' (erneut laden)')}finally{$('loadDeck').disabled=false}
+}
