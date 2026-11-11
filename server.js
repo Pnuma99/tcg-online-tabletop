@@ -17,16 +17,52 @@ const server=http.createServer((req,res)=>{
 });
 const wss=new WebSocketServer({server,maxPayload:5*1024*1024});
 const makePlayer=()=>({counters:{},token:crypto.randomUUID(),socket:null,energy:5,maxEnergy:5,heroes:Array(6).fill(null),heroPool:[],activeSpell:null,deck:[],hand:[],discard:[]});
-const makeRoom=()=>({players:[makePlayer(),makePlayer()],turn:0,round:1,log:[],emptySince:null});
+const makeRoom=()=>({players:[makePlayer(),makePlayer()],turn:0,round:1,log:[],pending:null,emptySince:null});
 const send=(ws,obj)=>{if(ws?.readyState===WebSocket.OPEN)ws.send(JSON.stringify(obj))};
 const log=(r,s)=>{r.log.unshift(s);r.log=r.log.slice(0,35)};
 const publicCard=(c)=>({id:c.id,name:c.name,image:c.image,type:c.type,attack:c.attack,hp:c.hp,maxHp:c.maxHp,armor:c.armor,counters:c.counters||{},exhausted:c.exhausted,statuses:c.statuses||[],effectiveAttack:Math.max(0,c.attack+(c.statuses||[]).filter(x=>x.stat==='attack').reduce((n,x)=>n+x.amount,0))});
-function snapshot(r,viewer){return {type:'state',you:viewer,turn:r.turn,round:r.round,log:r.log,players:r.players.map((p,i)=>({connected:!!p.socket&&p.socket.readyState===WebSocket.OPEN,energy:p.energy,maxEnergy:p.maxEnergy,counters:p.counters,heroes:p.heroes.map(h=>h?publicCard(h):null),heroPool:p.heroPool.map(publicCard),activeSpell:p.activeSpell?publicCard(p.activeSpell):null,hand:i===viewer?p.hand.map(publicCard):Array(p.hand.length).fill(null),deckCount:p.deck.length,discard:p.discard.map(publicCard)}))}}
+function snapshot(r,viewer){return {type:'state',you:viewer,turn:r.turn,round:r.round,log:r.log,pending:r.pending?{kind:r.pending.kind,requester:r.pending.requester,name:r.pending.name||''}:null,players:r.players.map((p,i)=>({connected:!!p.socket&&p.socket.readyState===WebSocket.OPEN,energy:p.energy,maxEnergy:p.maxEnergy,counters:p.counters,heroes:p.heroes.map(h=>h?publicCard(h):null),heroPool:p.heroPool.map(publicCard),activeSpell:p.activeSpell?publicCard(p.activeSpell):null,hand:i===viewer?p.hand.map(publicCard):Array(p.hand.length).fill(null),deckCount:p.deck.length,discard:p.discard.map(publicCard)}))}}
 function broadcast(r){r.players.forEach((p,i)=>send(p.socket,snapshot(r,i)))}
 const bounded=(v,min,max)=>Math.max(min,Math.min(max,Number.isFinite(Number(v))?Math.trunc(Number(v)):min));
 const getCard=(p,id)=>p.hand.findIndex(c=>c.id===id);
 function action(r,who,m){const p=r.players[who],op=r.players[1-who];const target=r.players[bounded(m.player,0,1)];const slot=bounded(m.slot,0,5);let h=target.heroes[slot];
  switch(m.action){
+ case 'requestCleanup':{
+  if(r.pending)throw Error('Es wartet bereits eine Bestätigung');
+  if(!op.socket||op.socket.readyState!==WebSocket.OPEN)throw Error('Gegner muss online sein');
+  r.pending={kind:'cleanup',requester:who};log(r,`Spieler ${who+1} beantragt das vollständige Aufräumen`);break;
+ }
+ case 'requestReturnHero':{
+  if(r.pending)throw Error('Es wartet bereits eine Bestätigung');
+  if(m.player!==who||!h)throw Error('Ungültiger Charakter');
+  if(!op.socket||op.socket.readyState!==WebSocket.OPEN)throw Error('Gegner muss online sein');
+  r.pending={kind:'returnHero',requester:who,slot,cardId:h.id,name:h.name};
+  log(r,`Spieler ${who+1} beantragt die Rücknahme von ${h.name}`);break;
+ }
+ case 'respondApproval':{
+  const req=r.pending;if(!req||req.requester===who)throw Error('Keine gegnerische Anfrage');
+  r.pending=null;
+  if(m.approve!==true){log(r,`Spieler ${who+1} lehnt die Anfrage ab`);break}
+  if(req.kind==='returnHero'){
+   const owner=r.players[req.requester];const card=owner.heroes[req.slot];
+   if(!card||card.id!==req.cardId)throw Error('Charakter wurde inzwischen verändert');
+   owner.heroPool.push(card);owner.heroes[req.slot]=null;
+   log(r,`Spieler ${who+1} genehmigt die Rücknahme von ${card.name}`);
+  }else if(req.kind==='cleanup'){
+   for(const pl of r.players){for(const hero of pl.heroes){if(hero){hero.hp=hero.maxHp;hero.armor=0;hero.exhausted=false;hero.statuses=[];hero.counters={};pl.heroPool.push(hero)}}
+    pl.heroes=Array(6).fill(null);if(pl.activeSpell){pl.discard.push(pl.activeSpell);pl.activeSpell=null}
+    pl.deck.push(...pl.hand.splice(0),...pl.discard.splice(0));for(let i=pl.deck.length-1;i>0;i--){const j=crypto.randomInt(i+1);[pl.deck[i],pl.deck[j]]=[pl.deck[j],pl.deck[i]]}
+    pl.energy=pl.maxEnergy;
+   }
+   log(r,`Beide Spieler bestätigen das vollständige Aufräumen`);
+  }break;
+ }
+ case 'deleteCard':{
+  const zone=String(m.zone);if(!['heroPool','hand','discard'].includes(zone))throw Error('Ungültiger Kartenbereich');
+  const idx=p[zone].findIndex(c=>c.id===m.cardId);if(idx<0)throw Error('Karte nicht gefunden');
+  const [deleted]=p[zone].splice(idx,1);log(r,`Spieler ${who+1} löscht ${deleted.name}`);break;
+ }
+
  case 'import': {if(!Array.isArray(m.cards)||m.cards.length>30)throw Error('Maximal 30 Karten pro Import');for(const c of m.cards){if(typeof c.name!=='string'||c.name.length>80||typeof c.image!=='string'||c.image.length>650000||!/^data:image\/(png|jpeg|webp);base64,/.test(c.image))throw Error('Ungültige Karte oder Bild zu groß');(c.type==='hero'?p.heroPool:p.deck).push({id:crypto.randomUUID(),name:c.name,image:c.image,type:c.type==='hero'?'hero':'action',attack:bounded(c.attack,0,99),hp:bounded(c.hp,1,99),maxHp:bounded(c.hp,1,99),armor:0,counters:{},exhausted:false,statuses:[]})}log(r,`Spieler ${who+1} importiert ${m.cards.length} Karten`);break}
  case 'shuffle':for(let i=p.deck.length-1;i>0;i--){let j=crypto.randomInt(i+1);[p.deck[i],p.deck[j]]=[p.deck[j],p.deck[i]]}log(r,`Spieler ${who+1} mischt das Deck`);break;
  case 'draw':{let n=bounded(m.count??1,1,10);while(n--&&p.deck.length)p.hand.push(p.deck.pop());log(r,`Spieler ${who+1} zieht Karten`);break}
@@ -34,9 +70,9 @@ function action(r,who,m){const p=r.players[who],op=r.players[1-who];const target
  case 'play':{const idx=getCard(p,m.cardId);if(idx<0)throw Error('Karte nicht auf deiner Hand');if(p.activeSpell)throw Error('Magiefeld belegt: Karte zuerst ablegen');const [c]=p.hand.splice(idx,1);if(c.type!=='action')throw Error('Nur Magiekarten hier ausspielen');p.activeSpell=c;log(r,`Spieler ${who+1} spielt ${c.name} offen aus`);break}
  case 'discardSpell':{if(!p.activeSpell)throw Error('Kein Zauber auf dem Feld');p.discard.push(p.activeSpell);log(r,`Spieler ${who+1} legt ${p.activeSpell.name} ab`);p.activeSpell=null;break}
  case 'recycle':{p.deck.push(...p.discard.splice(0));for(let i=p.deck.length-1;i>0;i--){const j=crypto.randomInt(i+1);[p.deck[i],p.deck[j]]=[p.deck[j],p.deck[i]]}log(r,`Spieler ${who+1} mischt die Ablage zurück ins Deck`);break}
- case 'cleanup':{if(m.confirm!==true)throw Error('Bestätigung fehlt');for(const hero of p.heroes){if(hero){hero.hp=hero.maxHp;hero.armor=0;hero.exhausted=false;hero.statuses=[];hero.counters={};p.heroPool.push(hero)}}p.heroes=Array(6).fill(null);if(p.activeSpell){p.discard.push(p.activeSpell);p.activeSpell=null}p.deck.push(...p.hand.splice(0),...p.discard.splice(0));for(let i=p.deck.length-1;i>0;i--){const j=crypto.randomInt(i+1);[p.deck[i],p.deck[j]]=[p.deck[j],p.deck[i]]}p.energy=p.maxEnergy;log(r,`Spieler ${who+1} räumt sein Spielfeld auf und mischt Magiekarten`);break}
+ case 'cleanup':{throw Error('Aufräumen erfordert jetzt Zustimmung beider Spieler');if(m.confirm!==true)throw Error('Bestätigung fehlt');for(const hero of p.heroes){if(hero){hero.hp=hero.maxHp;hero.armor=0;hero.exhausted=false;hero.statuses=[];hero.counters={};p.heroPool.push(hero)}}p.heroes=Array(6).fill(null);if(p.activeSpell){p.discard.push(p.activeSpell);p.activeSpell=null}p.deck.push(...p.hand.splice(0),...p.discard.splice(0));for(let i=p.deck.length-1;i>0;i--){const j=crypto.randomInt(i+1);[p.deck[i],p.deck[j]]=[p.deck[j],p.deck[i]]}p.energy=p.maxEnergy;log(r,`Spieler ${who+1} räumt sein Spielfeld auf und mischt Magiekarten`);break}
  case 'condition':{if(!h)throw Error('Kein Held');const kind=String(m.kind);if(!['burn','poison'].includes(kind))throw Error('Unbekannter Zustand');h.counters[kind]=bounded(m.value,0,99);log(r,`${h.name}: ${kind} ${h.counters[kind]}`);break}
- case 'returnHero':{if(m.player!==who)throw Error('Nur eigene Helden zurücknehmen');if(!h)throw Error('Kein Held');p.heroPool.push(h);p.heroes[slot]=null;log(r,`Spieler ${who+1} nimmt ${h.name} zurück`);break}
+ case 'returnHero':{throw Error('Charakter-Rücknahme erfordert Zustimmung');if(m.player!==who)throw Error('Nur eigene Helden zurücknehmen');if(!h)throw Error('Kein Held');p.heroPool.push(h);p.heroes[slot]=null;log(r,`Spieler ${who+1} nimmt ${h.name} zurück`);break}
  case 'move':{if(m.player!==who)throw Error('Nur eigene Helden bewegen');const to=bounded(m.to,0,5);if(!h||target.heroes[to])throw Error('Ungültige Bewegung');target.heroes[to]=h;target.heroes[slot]=null;log(r,`Spieler ${who+1} bewegt ${h.name}`);break}
  case 'exhaust':if(!h)throw Error('Keine Karte');h.exhausted=!h.exhausted;log(r,`${h.name}: ${h.exhausted?'erschöpft':'aktiv'}`);break;
  case 'setStat':{if(!h)throw Error('Kein Held');const stat=String(m.stat);if(!['hp','maxHp','attack','armor'].includes(stat))throw Error('Unbekannter Wert');h[stat]=bounded(m.value,0,9999);log(r,`${h.name}: ${stat} = ${h[stat]}`);break}
