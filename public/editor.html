@@ -5,7 +5,14 @@ const ids=['name','attack','hp','role','frame','brightness','zoom','iconZoom','a
 function wrapWords(t,x,y,width,size,lineH,maxY){ctx.font=`${V('style')} ${size}px Arial,sans-serif`;ctx.textAlign='left';ctx.fillStyle='#19151e';let words=t.split(/\s+/),line='';let letter=num('spacing');ctx.letterSpacing=letter+'px';for(const word of words){let test=line?line+' '+word:word;if(ctx.measureText(test).width>width&&line){ctx.fillText(line,x,y);y+=lineH;line=word;if(y>maxY)break}else line=test}if(y<=maxY)ctx.fillText(line,x,y);ctx.letterSpacing='0px';return y+lineH}
 function polygon(points,fill,stroke,lw=3){ctx.beginPath();ctx.moveTo(...points[0]);for(let i=1;i<points.length;i++)ctx.lineTo(...points[i]);ctx.closePath();ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw;ctx.stroke()}}
 function gradient(y,h,top,mid,bottom){const g=ctx.createLinearGradient(0,y,0,y+h);g.addColorStop(0,top);g.addColorStop(.43,mid);g.addColorStop(1,bottom);return g}
-function badge(x,y,w,h,colors){const pts=[[x+22,y],[x+w-22,y],[x+w,y+h/2],[x+w-22,y+h],[x+22,y+h],[x,y+h/2]];polygon(pts,'#111115','#f5f5f5',9);ctx.save();ctx.beginPath();ctx.moveTo(x+22,y+5);ctx.lineTo(x+w-22,y+5);ctx.lineTo(x+w-6,y+h/2);ctx.lineTo(x+w-22,y+h-5);ctx.lineTo(x+22,y+h-5);ctx.lineTo(x+6,y+h/2);ctx.closePath();ctx.clip();ctx.fillStyle=gradient(y,h,...colors);ctx.fillRect(x,y,w,h);ctx.restore();polygon(pts,'#0000','#15151a',2)}
+function badge(x,y,w,h,colors){
+ const pts=[[x+22,y],[x+w-22,y],[x+w,y+h/2],[x+w-22,y+h],[x+22,y+h],[x,y+h/2]];
+ polygon(pts,'#0d0d10','#f5f5f5',5);
+ const inner=pts.map(([px,py])=>[x+(px-x)*.96+w*.02,y+(py-y)*.90+h*.05]);
+ polygon(inner,'#151518','#101014',5);
+ ctx.save();ctx.beginPath();ctx.moveTo(x+25,y+8);ctx.lineTo(x+w-25,y+8);ctx.lineTo(x+w-10,y+h/2);ctx.lineTo(x+w-25,y+h-8);ctx.lineTo(x+25,y+h-8);ctx.lineTo(x+10,y+h/2);ctx.closePath();ctx.clip();
+ ctx.fillStyle=gradient(y,h,...colors);ctx.fillRect(x,y,w,h);ctx.restore();
+}
 function sword(x,y){ctx.save();ctx.translate(x,y);ctx.rotate(.72);ctx.lineJoin='round';ctx.strokeStyle='#121216';ctx.lineWidth=3;ctx.fillStyle='#f4f4f5';ctx.beginPath();ctx.moveTo(-7,-24);ctx.lineTo(0,-37);ctx.lineTo(7,-24);ctx.lineTo(7,11);ctx.lineTo(-7,11);ctx.closePath();ctx.fill();ctx.stroke();ctx.beginPath();ctx.roundRect(-17,10,34,7,2);ctx.fill();ctx.stroke();ctx.beginPath();ctx.roundRect(-4,17,8,18,2);ctx.fill();ctx.stroke();ctx.restore()}
 function heart(x,y){ctx.save();ctx.translate(x,y);ctx.beginPath();ctx.moveTo(0,22);ctx.bezierCurveTo(-12,12,-23,4,-23,-8);ctx.bezierCurveTo(-23,-24,-5,-24,0,-13);ctx.bezierCurveTo(5,-24,23,-24,23,-8);ctx.bezierCurveTo(23,4,12,12,0,22);ctx.closePath();ctx.fillStyle='#f9fff8';ctx.fill();ctx.strokeStyle='#141414';ctx.lineWidth=3;ctx.stroke();ctx.restore()}
 function drawFit(t,x,y,maxW,size,color,align='left',family='Arial',style='italic'){ctx.textAlign=align;ctx.fillStyle=color;while(size>15){ctx.font=`${style} ${size}px "${family}"`;if(ctx.measureText(t).width<=maxW)break;size--}ctx.fillText(t,x,y)}
@@ -16,7 +23,7 @@ function render(){
  rounded(32,30,725,72,26,'#1c1c1f','#e5e5e5',2);
  drawFit(V('name'),70,78,590,num('nameFont'),'#fff','left',V('titleFamily'));
  // Artwork: square-corner image bounds are clipped with a rounded path, under a thin white frame.
- rounded(30,113,731,608,26,'#f5f5f5','#fff',3);
+ rounded(30,113,731,608,26,'#f5f5f5','#e5e5e5',2);
  ctx.save();ctx.beginPath();ctx.roundRect(37,120,717,594,19);ctx.clip();
  if(artwork){imageCover(artwork,37,120,717,594,num('zoom')/100,num('artX')*2,num('artY')*2)}
  else{ctx.fillStyle=V('frame');ctx.fillRect(37,120,717,594);drawFit('Artwork hochladen',395,415,600,32,'#fff','center')}
@@ -27,25 +34,36 @@ function render(){
  if(roleIcon)imageCover(roleIcon,658,16,100,100,num('iconZoom')/100,0,0);
  else drawFit('◆',708,86,65,55,'#49bdf4','center','Arial','bold');ctx.restore();
  // Three taller aligned stat badges.
- badge(31,672,231,83,['#ff8387','#f01928','#a40013']);
- badge(527,672,232,83,['#b0ff8b','#2de93c','#08791a']);
- badge(271,676,248,77,['#4a4a4b','#29292b','#18181a']);
+ badge(31,672,214,83,['#ff8387','#f01928','#a40013']);
+ badge(544,672,214,83,['#b0ff8b','#2de93c','#08791a']);
+ badge(313,676,164,77,['#4a4a4b','#29292b','#18181a']);
  sword(88,714);heart(710,714);
  drawFit(V('attack'),171,735,100,58,'white','center','Arial','bold');
  drawFit(V('hp'),618,735,108,58,'white','center','Arial','bold');
- drawFit(V('role'),395,727,205,32,'white','center',V('fontFamily'));
+ drawFit(V('role'),395,727,137,32,'white','center',V('fontFamily'));
  // Text panel, curved borders and purple pill badges.
  rounded(29,766,733,285,24,'#f5f2f6','#131316',4);
  const sz=num('font'),lh=sz*num('line')/100, family=V('fontFamily');
  const labels=[['passive','Passive Fähigkeit:'],['active','Aktive Fähigkeit:'],['rage','Zorn-Effekt:']];
  const panelTop=794, panelBottom=961, space=8;
- function measureEffect(id,label,fs){ctx.font=`${V('style')} ${fs}px "${family}"`;let badgeW=label==='Zorn-Effekt:'?159:214;let x=52+badgeW+11,y=0;let max=739;let words=V(id).trim().split(/\s+/);for(let word of words){let w=ctx.measureText(word+' ').width;if(x+w>max){x=55;y+=fs*num('line')/100}x+=w}return y+fs*num('line')/100}
- let fs=sz;while(fs>14&&labels.reduce((n,[id,label])=>n+measureEffect(id,label,fs)+space,0)>panelBottom-panelTop)fs--;
+ function badgeWidth(label,fs){ctx.font=`italic ${fs*.76}px "${family}"`;return Math.ceil(ctx.measureText(label).width)+22}
+ function measureEffect(id,label,fs){
+  ctx.font=`${V('style')} ${fs}px "${family}"`;
+  let x=49+badgeWidth(label,fs)+10, lines=1;
+  for(const word of V(id).trim().split(/\s+/)){
+   const w=ctx.measureText(word+' ').width;
+   if(x+w>739){x=55;lines++}
+   x+=w;
+  }
+  return lines*fs*num('line')/100+12;
+ }
+ let fs=sz;
+ while(fs>14&&labels.reduce((n,[id,label])=>n+measureEffect(id,label,fs)+space+8,0)>panelBottom-panelTop)fs--;
  let y=panelTop+fs;
- for(const [id,label] of labels){
-  const bw=id==='rage'?158:214,bh=Math.max(24,fs+7);
+ for(const [index,[id,label]] of labels.entries()){
+  const bw=badgeWidth(label,fs),bh=Math.max(23,fs+5);
   rounded(49,y-fs+1,bw,bh,Math.min(13,bh/2),gradient(y-fs,bh,'#b65fc4','#79348c','#4d1b66'));
-  drawFit(label,57,y+1,bw-13,fs*.76,'white','left',family,'italic');
+  drawFit(label,59,y+1,bw-18,fs*.76,'white','left',family,'italic');
   ctx.fillStyle='#1a171c';ctx.textAlign='left';ctx.font=`${V('style')} ${fs}px "${family}"`;
   let x=49+bw+10,cy=y;
   for(const word of V(id).trim().split(/\s+/)){
@@ -54,7 +72,12 @@ function render(){
    if(cy<=panelBottom)ctx.fillText(word,x,cy);
    x+=width;
   }
-  y=cy+fs*num('line')/100+space;
+  const sepY=cy+Math.max(7,fs*.48);
+  if(index<2 && sepY<panelBottom-4){
+   ctx.strokeStyle='#b9a4c2';ctx.lineWidth=1.5;
+   ctx.beginPath();ctx.moveTo(55,sepY);ctx.lineTo(735,sepY);ctx.stroke();
+  }
+  y=sepY+fs*.85+space;
  }
  ctx.strokeStyle=V('frame');ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(55,981);ctx.lineTo(735,981);ctx.stroke();
  // Diamond ornament.
