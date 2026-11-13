@@ -36,3 +36,9 @@ Node.js >= 20: `npm install && npm start` → http://localhost:3000
 - Die Web-App kann iOS nicht zuverlässig in Querformat zwingen: iPhone drehen und Ausrichtungssperre deaktivieren.
 - Kein produktionsreifes Login/Anti-Cheat-System. Nur für private Tests.
 - Es wurde keine vollständige Ende-zu-Ende-Mehrspielerprüfung durchgeführt.
+
+
+## Karteneditor (neu)
+Im Hauptmenü „Karteneditor“ wählen. Die Karte wird im Format 67 × 92 mm gerendert. Eigene Artworks und Rollen-Icons hochladen, Effekttexte und Schriftparameter ändern, Rahmenfarbe wählen und PNG mit optionalem Beschnitt exportieren. „In Deckbuilder speichern“ übernimmt das gerenderte Kartenbild samt Name, Angriff und Leben in die lokale Kartenbibliothek. Projekte können als JSON einschließlich eingebetteter Bilder gesichert und geladen werden.
+
+Hinweis: Das Kartenlayout ist eine editierbare Annäherung an die Beispielkarte, keine pixelgenaue Rekonstruktion. Große Bilder können das Browser-Speicherlimit überschreiten; im Zweifel das PNG exportieren.

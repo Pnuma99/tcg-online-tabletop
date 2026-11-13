@@ -11,7 +11,7 @@ const now=()=>Date.now();
 const server=http.createServer((req,res)=>{
  const pathname=new URL(req.url,'http://localhost').pathname;
  const file=pathname==='/'?'index.html':pathname.slice(1);
- if(!['index.html','app.js','style.css'].includes(file)){res.writeHead(404);return res.end('Not found')}
+ if(!['index.html','app.js','style.css','editor.html'].includes(file)){res.writeHead(404);return res.end('Not found')}
  const mime=file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':'text/html';
  res.writeHead(200,{'Content-Type':mime+'; charset=utf-8','Cache-Control':'no-store'});fs.createReadStream(path.join(root,file)).pipe(res);
 });
