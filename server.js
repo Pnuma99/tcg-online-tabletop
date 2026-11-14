@@ -11,7 +11,7 @@ const now=()=>Date.now();
 const server=http.createServer((req,res)=>{
  const pathname=new URL(req.url,'http://localhost').pathname;
  const file=pathname==='/'?'index.html':pathname.slice(1);
- if(!['index.html','app.js','style.css','editor.html',...['attack','hp','combat','passive','active','rage'].map(x=>'editor-assets/'+x+'.png')].includes(file)){res.writeHead(404);return res.end('Not found')}
+ if(!['index.html','app.js','style.css','editor.html',...['attack','hp','combat','passive','active','rage','sword-symbol','heart-symbol'].map(x=>'editor-assets/'+x+'.png'),...['tank','heiler','nahkaempfer'].map(x=>'role-icons/'+x+'.png')].includes(file)){res.writeHead(404);return res.end('Not found')}
  const mime=file.endsWith('.png')?'image/png':file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':'text/html';
  res.writeHead(200,{'Content-Type':mime+'; charset=utf-8','Cache-Control':'no-store'});fs.createReadStream(path.join(root,file)).pipe(res);
 });
