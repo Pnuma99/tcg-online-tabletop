@@ -60,20 +60,20 @@ function drawFrameShimmer(full){
  const hex=activeColor().replace('#','');
  const rgb=[0,2,4].map(i=>parseInt(hex.slice(i,i+2),16));
  const bright=rgb.map(v=>Math.min(255,Math.round(v*.35+255*.65)));
- const color=(a)=>`rgba(${bright.join(',')},${a})`;
+ const color=a=>`rgba(${bright.join(',')},${a})`;
  ctx.save();
- // Only the colored perimeter is affected. Keep the artwork, text and status panels clean.
- ctx.beginPath();ctx.roundRect(9,9,773,1069,37);
- ctx.roundRect(30,31,731,1025,25);
+ // Protect the outermost charcoal frame: reflections are clipped strictly
+ // to the colored inner frame, never to the outside dark-gray border.
+ ctx.beginPath();ctx.roundRect(21,19,749,1048,29);
+ ctx.roundRect(34,34,723,1018,23);
  ctx.clip('evenodd');
- // Long luminous ribbons, intentionally visible at preview size.
  const ribbons=[
-  [[-30,210],[110,8],[270,-22]],
-  [[550,-25],[710,40],[825,190]],
-  [[-30,880],[90,1050],[260,1105]],
-  [[540,1110],[710,1050],[820,875]],
-  [[-25,570],[28,480],[65,385]],
-  [[720,705],[769,600],[815,490]]
+  [[10,210],[95,14],[270,5]],
+  [[550,5],[710,32],[785,190]],
+  [[10,875],[95,1052],[260,1075]],
+  [[540,1075],[710,1050],[785,875]],
+  [[15,570],[30,480],[48,385]],
+  [[740,705],[760,600],[780,490]]
  ];
  for(const points of ribbons){
   for(const [width,alpha] of [[23,.19],[11,.45],[3,.95]]){
@@ -82,16 +82,22 @@ function drawFrameShimmer(full){
    ctx.lineWidth=width;ctx.shadowColor=color(.9);ctx.shadowBlur=width===3?13:0;ctx.stroke();ctx.shadowBlur=0;
   }
  }
- // Color-tinted highlight along the inner perimeter, with sharp silver accents.
- ctx.beginPath();ctx.roundRect(27,28,737,1031,27);
- ctx.strokeStyle=color(.83);ctx.lineWidth=3.5;ctx.shadowColor=color(.8);ctx.shadowBlur=8;ctx.stroke();ctx.shadowBlur=0;
- for(const [x,y] of [[43,42],[749,42],[43,1043],[749,1043]]){
-  const glow=ctx.createRadialGradient(x,y,0,x,y,95);
-  glow.addColorStop(0,color(.75));glow.addColorStop(.35,color(.27));glow.addColorStop(1,color(0));
-  ctx.fillStyle=glow;ctx.fillRect(x-95,y-95,190,190);
- }
+ ctx.beginPath();ctx.roundRect(26,26,739,1035,27);
+ ctx.strokeStyle=color(.7);ctx.lineWidth=2;ctx.shadowColor=color(.7);ctx.shadowBlur=6;ctx.stroke();ctx.shadowBlur=0;
+ ctx.restore();
+ // Horizontal middle segment: the thin colored band between the artwork/stat
+ // row and the lower text panel was missing from the shimmer treatment.
+ ctx.save();ctx.beginPath();ctx.rect(32,751,727,8);ctx.clip();
+ const middle=ctx.createLinearGradient(32,0,759,0);
+ middle.addColorStop(0,color(.12));middle.addColorStop(.23,color(.9));
+ middle.addColorStop(.5,'rgba(255,255,255,.85)');
+ middle.addColorStop(.77,color(.9));middle.addColorStop(1,color(.12));
+ ctx.fillStyle=middle;ctx.fillRect(32,752,727,5);
+ ctx.strokeStyle=color(.9);ctx.lineWidth=3;ctx.shadowColor=color(.95);ctx.shadowBlur=10;
+ ctx.beginPath();ctx.moveTo(35,755);ctx.quadraticCurveTo(395,747,756,755);ctx.stroke();
  ctx.restore();
 }
+
 function render(){
  const frameColor=frameTone();
  const W=791,H=1087;C.width=W;C.height=H;ctx.clearRect(0,0,W,H);
@@ -101,8 +107,8 @@ function render(){
   ctx.save();ctx.beginPath();ctx.roundRect(8,8,775,1071,37);ctx.clip();
   imageCover(artwork,8,8,775,1071,num('zoom')/100,num('artX')*2,num('artY')*2);
   ctx.restore();
-  // Full Art: one continuous, aspect-ratio-preserving artwork image; frame overlay 95% opaque (5% transparent).
-  rounded(8,8,775,1071,37,'rgba(41,41,46,.95)',null,0);
+  // Full Art: preserve full-color artwork. Only the frame tint is 5% opaque; the text panel below is 95% opaque.
+  rounded(8,8,775,1071,37,'rgba(41,41,46,.05)',null,0);
   rounded(21,19,749,1048,29,null,'rgba(238,238,238,.20)',1.5);
  }else{
   rounded(8,8,775,1071,37,'#29292e','#8c8990',5);
