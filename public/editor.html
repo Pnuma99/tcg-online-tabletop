@@ -1,6 +1,6 @@
 <!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TCG Karteneditor</title><style>
 *{box-sizing:border-box}body{margin:0;background:#10151d;color:#eee;font:15px system-ui}header{padding:12px 18px;background:#1b2330;display:flex;gap:12px;align-items:center;flex-wrap:wrap}a{color:#d5c49c}button,select,input,textarea{background:#293342;color:white;border:1px solid #586374;border-radius:6px;padding:8px;font:inherit}button{cursor:pointer}button:hover{background:#43536b}.layout{display:grid;grid-template-columns:minmax(280px,440px) minmax(290px,1fr);gap:18px;max-width:1200px;margin:16px auto;padding:0 12px}.controls{display:grid;grid-template-columns:1fr 1fr;gap:9px}.controls label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:#c7d1de}.controls label.wide{grid-column:span 2}textarea{min-height:66px;resize:vertical}section{background:#1b2330;border-radius:12px;padding:14px;margin-bottom:12px}h3{margin:0 0 12px}.preview{position:sticky;top:10px;align-self:start;text-align:center}canvas{width:min(100%,450px);height:auto;background:white;box-shadow:0 8px 30px #0008;border-radius:14px}.hint{font-size:12px;color:#aebbc9}.buttons{display:flex;gap:8px;flex-wrap:wrap}input[type=color]{width:100%;height:38px;padding:2px}@media(max-width:750px){.layout{grid-template-columns:1fr}.preview{position:static;grid-row:1}canvas{max-height:65vh;width:auto;max-width:100%}}
-</style></head><body><header><a href="/">← Tabletop</a><strong>✦ Karteneditor</strong><span class="hint">67 × 92 mm · Vorschau / PNG</span></header><div class="layout"><div class="settings"><section><h3>Kartendaten</h3><div class="controls"><label class="wide">Name<input id="name" value="Carosin - Die Leerenbändigerin"></label><label>Angriff<input id="attack" type="number" value="2"></label><label>Leben<input id="hp" type="number" value="22"></label><label class="wide">Kampfart<input id="role" value="Nahkampf"></label><label>Rahmenfarbe<input id="frame" type="color" value="#74518d"></label><label>Rahmenhelligkeit<input id="brightness" type="range" min="0" max="100" value="24"></label></div></section><section><h3>Bilder</h3><div class="controls"><label class="wide">Artwork<input id="art" type="file" accept="image/*"></label><label class="wide">Rollen-Icon auswählen<select id="presetRole"><option value="">Eigenes Icon / bisheriges Icon</option><option value="tank">Tank – Schild</option><option value="heiler">Supporter – Kreuz</option><option value="nahkaempfer">Nahkämpfer – Schwerter</option></select></label><div class="wide" id="roleChoices" style="display:flex;gap:12px;flex-wrap:wrap"><button type="button" data-icon="tank" title="Tank" style="padding:6px"><img src="/role-icons/tank.png" width="65" height="65" style="object-fit:contain"></button><button type="button" data-icon="heiler" title="Supporter" style="padding:6px"><img src="/role-icons/heiler.png" width="65" height="65" style="object-fit:contain"></button><button type="button" data-icon="nahkaempfer" title="Nahkämpfer" style="padding:6px"><img src="/role-icons/nahkaempfer.png" width="65" height="65" style="object-fit:contain"></button></div><label class="wide">Rollen-Icon<input id="icon" type="file" accept="image/*"></label><label class="wide">Völkerwappen (optional)<input id="crest" type="file" accept="image/*"></label><label class="wide">Völkerwappen auswählen<select id="crestPreset"><option value="">Eigenes Wappen / noch keine Wappen hinterlegt</option></select></label><label>Wappen-Deckkraft<input id="crestOpacity" type="range" min="0" max="100" value="30"></label><label>Artwork Zoom<input id="zoom" type="range" min="100" max="300" value="100"></label><label>Icon Zoom<input id="iconZoom" type="range" min="50" max="200" value="100"></label><label>Artwork X<input id="artX" type="range" min="-100" max="100" value="0"></label><label>Artwork Y<input id="artY" type="range" min="-100" max="100" value="0"></label></div></section><section><h3>Texte</h3><div class="controls"><label class="wide">Passive Fähigkeit<textarea id="passive">Schattenbestie: Gegnerische Helden erhalten Schatten-Marken. Für je 2 Marken erhält dieser Held +1 Angriff.</textarea></label><label class="wide">Aktive Fähigkeit<textarea id="active">Spöttischer Schatten: Bewege 2 Schatten-Marken auf einen gegnerischen Helden.</textarea></label><label class="wide">Zorn-Effekt<textarea id="rage">Wenn dieser Held Schaden erleidet, erhält er 2 Schatten-Marken statt einer.</textarea></label><label class="wide">Kartenspruch<textarea id="flavor">„Du hast meine Aufmerksamkeit, also stirb nicht zu schnell.“</textarea></label><label>Schriftart<select id="fontFamily"><option value="Arial">Arial</option><option value="Georgia">Georgia</option><option value="Trebuchet MS">Trebuchet MS</option><option value="Verdana">Verdana</option><option value="Times New Roman">Times New Roman</option></select></label><label>Namensschrift<select id="titleFamily"><option value="Georgia">Georgia</option><option value="Arial">Arial</option><option value="Trebuchet MS">Trebuchet MS</option><option value="Times New Roman">Times New Roman</option></select></label><label>Effekt-Schriftgröße<input id="font" type="range" min="15" max="42" value="26"></label><label>Zeilenabstand<input id="line" type="range" min="90" max="170" value="115"></label><label>Buchstabenabstand<input id="spacing" type="range" min="-2" max="5" step="0.5" value="0"></label><label>Schriftstil<select id="style"><option value="italic">Kursiv</option><option value="normal">Normal</option><option value="bold">Fett</option><option value="bold italic">Fett kursiv</option></select></label><label>Name Schriftgröße<input id="nameFont" type="range" min="24" max="60" value="43"></label><label>Spruch Schriftgröße<input id="flavorFont" type="range" min="16" max="42" value="28"></label></div></section><section><h3>Optionale Verzierungen</h3><div class="controls"><label class="wide"><span>Dezente Verzierungen am Kartenrahmen</span><input id="ornamentFrame" type="checkbox"></label><label class="wide"><span>Dezente Verzierungen an Anzeigen und Fähigkeits-Badges</span><input id="ornamentBadges" type="checkbox"></label></div></section><section><h3>Export</h3><div class="controls"><label>Beschnitt<input id="bleed" type="checkbox"></label><label>Beschnitt je Seite<select id="bleedMm"><option value="3">3 mm</option><option value="4">4 mm</option></select></label></div><div class="buttons" style="margin-top:12px"><button id="download">PNG 67 × 92 mm (300 DPI)</button><button id="downloadPdf">Druck-PDF 67 × 92 mm</button><button id="toLibrary">In Deckbuilder speichern</button><button id="save">Projekt speichern</button><button id="load">Projekt laden</button></div><p class="hint">Die Originalbilder bleiben für den Export im Browser erhalten, solange der Editor geöffnet ist. Projektdateien enthalten Einstellungen und hochgeladene Bilder. Zusätzlich kannst du die fertige Karte direkt im Deckbuilder speichern.</p></section></div><div class="preview"><canvas id="card" width="791" height="1087"></canvas><p class="hint">Live-Vorschau · die Ausgabe wird beim Export neu gerendert</p></div></div><script>
+</style></head><body><header><a href="/">← Tabletop</a><strong>✦ Karteneditor</strong><span class="hint">67 × 92 mm · Vorschau / PNG</span></header><div class="layout"><div class="settings"><section><h3>Kartendaten</h3><div class="controls"><label class="wide">Name<input id="name" value="Carosin - Die Leerenbändigerin"></label><label>Angriff<input id="attack" type="number" value="2"></label><label>Leben<input id="hp" type="number" value="22"></label><label class="wide">Kampfart<input id="role" value="Nahkampf"></label><label>Rahmenfarbe<input id="frame" type="color" value="#74518d"></label><label>Rahmenhelligkeit<input id="brightness" type="range" min="0" max="100" value="24"></label></div></section><section><h3>Bilder</h3><div class="controls"><label class="wide">Artwork<input id="art" type="file" accept="image/*"></label><label class="wide">Rollen-Icon auswählen<select id="presetRole"><option value="">Eigenes Icon / bisheriges Icon</option><option value="tank">Tank – Schild</option><option value="heiler">Supporter – Kreuz</option><option value="nahkaempfer">Schaden (DD) – Schwerter</option></select></label><div class="wide" id="roleChoices" style="display:flex;gap:12px;flex-wrap:wrap"><button type="button" data-icon="tank" title="Tank" style="padding:6px"><img src="/role-icons/tank.png" width="65" height="65" style="object-fit:contain"></button><button type="button" data-icon="heiler" title="Supporter" style="padding:6px"><img src="/role-icons/heiler.png" width="65" height="65" style="object-fit:contain"></button><button type="button" data-icon="nahkaempfer" title="Schaden (DD)" style="padding:6px"><img src="/role-icons/nahkaempfer.png" width="65" height="65" style="object-fit:contain"></button></div><label class="wide">Rollen-Icon<input id="icon" type="file" accept="image/*"></label><label class="wide">Völkerwappen (optional)<input id="crest" type="file" accept="image/*"></label><label class="wide">Völkerwappen auswählen<select id="crestPreset"><option value="">Eigenes Wappen / noch keine Wappen hinterlegt</option></select></label><label>Wappen-Deckkraft<input id="crestOpacity" type="range" min="0" max="100" value="20"></label><label>Artwork Zoom<input id="zoom" type="range" min="100" max="300" value="100"></label><label>Icon Zoom<input id="iconZoom" type="range" min="50" max="200" value="100"></label><label>Artwork X<input id="artX" type="range" min="-100" max="100" value="0"></label><label>Artwork Y<input id="artY" type="range" min="-100" max="100" value="0"></label></div></section><section><h3>Texte</h3><div class="controls"><label class="wide">Passive Fähigkeit<textarea id="passive">Schattenbestie: Gegnerische Helden erhalten Schatten-Marken. Für je 2 Marken erhält dieser Held +1 Angriff.</textarea></label><label class="wide">Aktive Fähigkeit<textarea id="active">Spöttischer Schatten: Bewege 2 Schatten-Marken auf einen gegnerischen Helden.</textarea></label><label class="wide">Zorn-Effekt<textarea id="rage">Wenn dieser Held Schaden erleidet, erhält er 2 Schatten-Marken statt einer.</textarea></label><label class="wide">Kartenspruch<textarea id="flavor">„Du hast meine Aufmerksamkeit, also stirb nicht zu schnell.“</textarea></label><label>Schriftart<select id="fontFamily"><option value="Arial">Arial</option><option value="Georgia">Georgia</option><option value="Trebuchet MS">Trebuchet MS</option><option value="Verdana">Verdana</option><option value="Times New Roman">Times New Roman</option></select></label><label>Namensschrift<select id="titleFamily"><option value="Georgia">Georgia</option><option value="Arial">Arial</option><option value="Trebuchet MS">Trebuchet MS</option><option value="Times New Roman">Times New Roman</option></select></label><label>Effekt-Schriftgröße<input id="font" type="range" min="15" max="42" value="26"></label><label>Zeilenabstand<input id="line" type="range" min="90" max="170" value="115"></label><label>Buchstabenabstand<input id="spacing" type="range" min="-2" max="5" step="0.5" value="0"></label><label>Schriftstil<select id="style"><option value="italic">Kursiv</option><option value="normal">Normal</option><option value="bold">Fett</option><option value="bold italic">Fett kursiv</option></select></label><label>Name Schriftgröße<input id="nameFont" type="range" min="24" max="60" value="43"></label><label>Spruch Schriftgröße<input id="flavorFont" type="range" min="16" max="42" value="28"></label></div></section><section><h3>Optionale Verzierungen</h3><div class="controls"><label class="wide"><span>Dezente Verzierungen am Kartenrahmen</span><input id="ornamentFrame" type="checkbox"></label><label class="wide"><span>Dezente Verzierungen an Anzeigen und Fähigkeits-Badges</span><input id="ornamentBadges" type="checkbox"></label></div></section><section><h3>Export</h3><div class="controls"><label>Beschnitt<input id="bleed" type="checkbox"></label><label>Beschnitt je Seite<select id="bleedMm"><option value="3">3 mm</option><option value="4">4 mm</option></select></label></div><div class="buttons" style="margin-top:12px"><button id="download">PNG 67 × 92 mm (300 DPI)</button><button id="downloadPdf">Druck-PDF 67 × 92 mm</button><button id="toLibrary">In Deckbuilder speichern</button><button id="save">Projekt speichern</button><button id="load">Projekt laden</button></div><p class="hint">Die Originalbilder bleiben für den Export im Browser erhalten, solange der Editor geöffnet ist. Projektdateien enthalten Einstellungen und hochgeladene Bilder. Zusätzlich kannst du die fertige Karte direkt im Deckbuilder speichern.</p></section></div><div class="preview"><canvas id="card" width="791" height="1087"></canvas><p class="hint">Live-Vorschau · die Ausgabe wird beim Export neu gerendert</p></div></div><script>
 const badgeImages={};
 for(const key of ['attack','hp','combat','passive','active','rage','swordSymbol','heartSymbol']){
  const img=new Image();img.onload=()=>{badgeImages[key]=img;if(typeof render==='function')render()};
@@ -28,19 +28,24 @@ function drawFit(t,x,y,maxW,size,color,align='left',family='Arial',style='italic
 function frameTone(){
  const hex=V('frame').replace('#','');
  const rgb=[0,2,4].map(i=>parseInt(hex.slice(i,i+2),16));
- // The brightness slider controls how strongly the selected hue tints the dark card frame.
+ // Only the inset/name/panel accents are tinted; the outer frame stays dark grey.
  const strength=.20+num('brightness')/100*.52;
  return 'rgb('+rgb.map(c=>Math.round(15*(1-strength)+c*strength)).join(',')+')';
+}
+function lightTone(){
+ const hex=V('frame').replace('#','');const rgb=[0,2,4].map(i=>parseInt(hex.slice(i,i+2),16));
+ const base=frameTone().match(/\d+/g).map(Number);
+ return 'rgb('+base.map((c,i)=>Math.min(255,Math.round(c*.74+rgb[i]*.26+20))).join(',')+')';
 }
 function render(){
  const frameColor=frameTone();
  const W=791,H=1087;C.width=W;C.height=H;ctx.clearRect(0,0,W,H);
- ctx.fillStyle=frameColor;ctx.fillRect(0,0,W,H);
- rounded(8,8,775,1071,37,frameColor,'#8c8990',5);rounded(21,19,749,1048,29,frameColor,'#eee',2);
- rounded(32,30,725,72,26,frameColor,'#e5e5e5',2);
+ ctx.fillStyle='#29292e';ctx.fillRect(0,0,W,H);
+ rounded(8,8,775,1071,37,'#29292e','#8c8990',5);rounded(21,19,749,1048,29,frameColor,'#eee',2);
+ rounded(32,30,725,72,26,lightTone(),'#e5e5e5',2);
  drawFit(V('name'),70,78,590,num('nameFont'),'#fff','left',V('titleFamily'));
  // Artwork: square-corner image bounds are clipped with a rounded path, under a thin white frame.
- rounded(30,113,731,608,26,frameColor,'#e5e5e5',2);
+ rounded(30,113,731,608,26,'#29292e','#e5e5e5',2);
  ctx.save();ctx.beginPath();ctx.roundRect(33,116,725,602,23);ctx.clip();
  if(artwork){imageCover(artwork,33,116,725,602,num('zoom')/100,num('artX')*2,num('artY')*2)}
  else{ctx.fillStyle='#695777';ctx.fillRect(33,116,725,602);drawFit('Artwork hochladen',395,415,600,32,'#fff','center')}
@@ -48,31 +53,39 @@ function render(){
  // The top-right circle is a role icon, not the combat-type label.
  rounded(660,18,96,96,48,'#202026','#e8e7e9',5);
  ctx.save();ctx.beginPath();ctx.arc(708,66,42,0,Math.PI*2);ctx.clip();
- if(roleIcon)imageCover(roleIcon,666,24,84,84,num('iconZoom')/100,0,0);
+ if(roleIcon)imageCover(roleIcon,670,28,76,76,num('iconZoom')/100*(V('presetRole')==='nahkaempfer'?.77:1),0,0);
  else drawFit('◆',708,81,55,46,'#49bdf4','center','Arial','bold');ctx.restore();
- // Three taller aligned stat badges.
- drawBadgeImage('attack',30,672,204,83,()=>badge(30,672,204,83,['#ff8387','#f01928','#a40013']));
- drawBadgeImage('hp',557,672,204,83,()=>badge(557,672,204,83,['#b0ff8b','#2de93c','#08791a']));
- drawBadgeImage('combat',293,676,205,77,()=>badge(293,676,205,77,['#4a4a4b','#29292b','#18181a']));
- if(badgeImages.swordSymbol)ctx.drawImage(badgeImages.swordSymbol,70,689,39,49);else sword(88,714);if(badgeImages.heartSymbol)ctx.drawImage(badgeImages.heartSymbol,693,687,55,51);else heart(710,714);
- drawFit(V('attack'),170,735,100,58,'white','center','Arial','bold');
- drawFit(V('hp'),638,735,108,58,'white','center','Arial','bold');
- drawFit(V('role'),395,727,175,32,'white','center',V('fontFamily'));
+ // Resolution-independent stat bars: crisp at preview and PDF/PNG export.
+ function statBar(x,y,w,h,colors){
+  const pts=[[x+19,y],[x+w-19,y],[x+w,y+h/2],[x+w-19,y+h],[x+19,y+h],[x,y+h/2]];
+  polygon(pts,'#111115','#101014',1.6);
+  const inset=3.2,inside=[[x+21,y+inset],[x+w-21,y+inset],[x+w-inset,y+h/2],[x+w-21,y+h-inset],[x+21,y+h-inset],[x+inset,y+h/2]];
+  polygon(inside,gradient(y,h,...colors),'#aaa9ac',1.35);
+  const shine=ctx.createLinearGradient(0,y+inset,0,y+h/2);shine.addColorStop(0,'rgba(255,255,255,.38)');shine.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.save();ctx.beginPath();ctx.moveTo(...inside[0]);inside.slice(1).forEach(pt=>ctx.lineTo(...pt));ctx.closePath();ctx.clip();ctx.fillStyle=shine;ctx.fillRect(x,y,w,h/2);ctx.restore();
+ }
+ statBar(30,687,204,65,['#ff858c','#ed1227','#9c0012']);
+ statBar(557,687,204,65,['#a8ff91','#20e73b','#05781b']);
+ statBar(290,690,211,60,['#57575b','#343437','#17171a']);
+ if(badgeImages.swordSymbol)ctx.drawImage(badgeImages.swordSymbol,66,696,43,46);else sword(88,721);if(badgeImages.heartSymbol)ctx.drawImage(badgeImages.heartSymbol,690,695,53,47);else heart(710,721);
+ drawFit(V('attack'),170,737,100,52,'white','center','Arial','bold');
+ drawFit(V('hp'),638,737,108,52,'white','center','Arial','bold');
+ drawFit(V('role'),395,731,180,31,'white','center',V('fontFamily'));
  // Text panel, curved borders and purple pill badges.
- rounded(29,766,733,285,24,'#f5f2f6','#131316',4);
- // Optional coat of arms behind the text, at 30% opacity by default.
+ rounded(29,758,733,301,24,'#f5f2f6','#131316',4);
+ // Optional coat of arms behind the text, at 20% opacity by default.
  if(crestImage){
   const maxW=360,maxH=230;
   const scale=Math.min(maxW/crestImage.width,maxH/crestImage.height);
   const w=crestImage.width*scale,h=crestImage.height*scale;
-  ctx.save();ctx.beginPath();ctx.roundRect(42,775,707,263,18);ctx.clip();
+  ctx.save();ctx.beginPath();ctx.roundRect(42,767,707,279,18);ctx.clip();
   ctx.globalAlpha=num('crestOpacity')/100;
   ctx.drawImage(crestImage,395-w/2,900-h/2,w,h);ctx.restore();
  }
  const sz=num('font'),lh=sz*num('line')/100, family=V('fontFamily');
  const labels=[['passive','Passive Fähigkeit:'],['active','Aktive Fähigkeit:'],['rage','Zorn-Effekt:']];
- const panelTop=794, panelBottom=961, space=8;
- function badgeWidth(label,fs){const k=label.startsWith('Passive')?'passive':label.startsWith('Aktive')?'active':'rage';const im=badgeImages[k];return im?.naturalWidth?Math.ceil((Math.max(34,fs+5))*im.naturalWidth/im.naturalHeight):Math.ceil(ctx.measureText(label).width)+22}
+ const panelTop=783, panelBottom=971, space=8;
+ function badgeWidth(label,fs){ctx.font=`italic ${Math.max(16,fs*.75)}px Arial`;return Math.ceil(ctx.measureText(label).width)+19}
  function measureEffect(id,label,fs){
   ctx.font=`${V('style')} ${fs}px "${family}"`;
   let x=49+badgeWidth(label,fs)+10, lines=1;
@@ -87,9 +100,10 @@ function render(){
  while(fs>14&&labels.reduce((n,[id,label])=>n+measureEffect(id,label,fs)+space+8,0)>panelBottom-panelTop)fs--;
  const decorationBadges=[];let y=panelTop+fs;
  for(const [index,[id,label]] of labels.entries()){
-  const bw=badgeWidth(label,fs),bh=Math.max(34,fs+5);
+  const bw=badgeWidth(label,fs),bh=Math.max(24,fs*.87);
   decorationBadges.push([49,y-fs+1,bw]);
-  drawBadgeImage(id,49,y-fs+1,bw,bh,()=>rounded(49,y-fs+1,bw,bh,Math.min(13,bh/2),gradient(y-fs,bh,'#b65fc4','#79348c','#4d1b66')));
+  rounded(49,y-fs+1,bw,bh,bh/2,gradient(y-fs,bh,lightTone(),frameColor,'#19171d'));
+  ctx.font=`italic ${Math.max(16,fs*.75)}px Arial`;ctx.fillStyle='#fff';ctx.textAlign='left';ctx.fillText(label,58,y-fs+1+bh*.75);
   
   ctx.fillStyle='#1a171c';ctx.textAlign='left';ctx.font=`${V('style')} ${fs}px "${family}"`;
   let x=49+bw+10,cy=y;
@@ -106,10 +120,10 @@ function render(){
   }
   y=sepY+fs*.85+space;
  }
- ctx.strokeStyle=V('frame');ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(55,981);ctx.lineTo(735,981);ctx.stroke();
+ ctx.strokeStyle=V('frame');ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(55,992);ctx.lineTo(735,992);ctx.stroke();
  // Diamond ornament.
- polygon([[395,973],[405,983],[395,993],[385,983]],'#f5f2f6',V('frame'),3);
- drawFit(V('flavor'),395,1021,663,num('flavorFont'),'#17151a','center',V('fontFamily'));
+ polygon([[395,984],[405,994],[395,1004],[385,994]],'#f5f2f6',V('frame'),3);
+ drawFit(V('flavor'),395,1034,663,num('flavorFont'),'#17151a','center',V('fontFamily'));
  if($('ornamentFrame').checked){
   ctx.save();ctx.strokeStyle='rgba(235,220,246,.30)';ctx.lineWidth=1.4;
   for(const [x,y,sx,sy] of [[49,124,1,1],[742,124,-1,1],[49,1046,1,-1],[742,1046,-1,-1]]){
@@ -119,7 +133,7 @@ function render(){
  }
  if($('ornamentBadges').checked){
   ctx.save();ctx.strokeStyle='rgba(255,255,255,.30)';ctx.lineWidth=1.3;
-  for(const [x,y,w,h] of [[30,672,204,83],[293,676,205,77],[557,672,204,83]]){
+  for(const [x,y,w,h] of [[30,687,204,65],[290,690,211,60],[557,687,204,65]]){
    ctx.beginPath();ctx.moveTo(x+35,y+11);ctx.lineTo(x+w-35,y+11);ctx.stroke();
   }
   for(const [x,y,w] of decorationBadges){ctx.beginPath();ctx.moveTo(x+11,y+5);ctx.lineTo(x+w-11,y+5);ctx.stroke()}
@@ -134,7 +148,7 @@ async function selectRoleIcon(key){if(!key)return;const paths=['/editor-assets/R
 $('presetRole').addEventListener('change',()=>selectRoleIcon($('presetRole').value).catch(e=>alert(e.message)));
 document.querySelectorAll('#roleChoices button').forEach(btn=>btn.addEventListener('click',()=>{$('presetRole').value=btn.dataset.icon;selectRoleIcon(btn.dataset.icon).catch(e=>alert(e.message))}));
 
-$('download').onclick=()=>{render();let out=document.createElement('canvas'),mm=$('bleed').checked?num('bleedMm'):0,b=Math.round(mm/25.4*300);out.width=C.width+2*b;out.height=C.height+2*b;let c=out.getContext('2d');c.fillStyle=frameTone();c.fillRect(0,0,out.width,out.height);c.drawImage(C,b,b);out.toBlob(blob=>{let url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=(V('name').replace(/[^\wäöüÄÖÜ-]+/g,'_')||'TCG_Karte')+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),3000)},'image/png')};$('downloadPdf').onclick=()=>{render();const mm=$('bleed').checked?num('bleedMm'):0;const w=67+mm*2,h=92+mm*2;const src=C.toDataURL('image/png');const win=window.open('','_blank');if(!win){alert('Bitte Pop-ups für den PDF-Export erlauben.');return;}win.document.write(`<!doctype html><html><head><meta name=viewport content="width=device-width,initial-scale=1"><style>@page{size:${w}mm ${h}mm;margin:0}html,body{margin:0;padding:0;width:${w}mm;height:${h}mm}img{display:block;position:absolute;left:${mm}mm;top:${mm}mm;width:67mm;height:92mm}body{background:${V('frame')}}</style></head><body><img src="${src}"><script>const pic=document.querySelector('img');pic.onload=()=>setTimeout(()=>window.print(),350);if(pic.complete)pic.onload()<\/script></body></html>`);win.document.close()};
+$('download').onclick=()=>{render();let out=document.createElement('canvas'),mm=$('bleed').checked?num('bleedMm'):0,b=Math.round(mm/25.4*300);out.width=C.width+2*b;out.height=C.height+2*b;let c=out.getContext('2d');c.fillStyle='#29292e';c.fillRect(0,0,out.width,out.height);c.drawImage(C,b,b);out.toBlob(blob=>{let url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=(V('name').replace(/[^\wäöüÄÖÜ-]+/g,'_')||'TCG_Karte')+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),3000)},'image/png')};$('downloadPdf').onclick=()=>{render();const mm=$('bleed').checked?num('bleedMm'):0;const w=67+mm*2,h=92+mm*2;const src=C.toDataURL('image/png');const win=window.open('','_blank');if(!win){alert('Bitte Pop-ups für den PDF-Export erlauben.');return;}win.document.write(`<!doctype html><html><head><meta name=viewport content="width=device-width,initial-scale=1"><style>@page{size:${w}mm ${h}mm;margin:0}html,body{margin:0;padding:0;width:${w}mm;height:${h}mm}img{display:block;position:absolute;left:${mm}mm;top:${mm}mm;width:67mm;height:92mm}body{background:#29292e}</style></head><body><img src="${src}"><script>const pic=document.querySelector('img');pic.onload=()=>setTimeout(()=>window.print(),350);if(pic.complete)pic.onload()<\/script></body></html>`);win.document.close()};
 $('save').onclick=()=>{let obj={version:3,artData,iconData,crestData,settings:Object.fromEntries(ids.map(id=>[id,$(id).type==='checkbox'?$(id).checked:V(id)]))};let a=document.createElement('a'),url=URL.createObjectURL(new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}));a.href=url;a.download='tcg-kartenprojekt.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),2000)};$('load').onclick=()=>{let i=document.createElement('input');i.type='file';i.accept='.json';i.onchange=async()=>{try{let obj=JSON.parse(await i.files[0].text());for(const [id,val] of Object.entries(obj.settings||{}))if($(id)){$(id).type==='checkbox'?$(id).checked=!!val:$(id).value=val}if(obj.artData){artData=obj.artData;artwork=await loadEmbedded(obj.artData)}if(obj.iconData){iconData=obj.iconData;roleIcon=await loadEmbedded(obj.iconData)}if(obj.crestData){crestData=obj.crestData;crestImage=await loadEmbedded(obj.crestData)}render()}catch(e){alert('Projekt konnte nicht geladen werden: '+e.message)}};i.click()};render();
 
 function loadEmbedded(src){return new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=reject;im.src=src})}
