@@ -1,0 +1,12 @@
+TCG Karteneditor – Änderungen
+
+Rollen-Icons: Funktioniert mit public/role-icons/ und public/editor-assets/Role-Icons/.
+Das Paket enthält beide Varianten; für zukünftige Updates genügt einer dieser Ordner.
+
+Wappen: Unter Bilder -> Völkerwappen eine PNG-Datei hochladen.
+Die Wappenauswahl bleibt leer, bis du die Wappen zur Verfügung stellst.
+Standard-Deckkraft 30 %, frei einstellbar. Die Wappen werden hinter dem Text gezeichnet.
+
+Verzierungen: Unter Optionale Verzierungen separat aktivieren.
+
+Nach Upload der Dateien muss Render die neue Version deployen.
