@@ -25,13 +25,22 @@ function badge(x,y,w,h,colors){
 function sword(x,y){ctx.save();ctx.translate(x,y);ctx.rotate(.72);ctx.lineJoin='round';ctx.strokeStyle='#121216';ctx.lineWidth=3;ctx.fillStyle='#f4f4f5';ctx.beginPath();ctx.moveTo(-7,-24);ctx.lineTo(0,-37);ctx.lineTo(7,-24);ctx.lineTo(7,11);ctx.lineTo(-7,11);ctx.closePath();ctx.fill();ctx.stroke();ctx.beginPath();ctx.roundRect(-17,10,34,7,2);ctx.fill();ctx.stroke();ctx.beginPath();ctx.roundRect(-4,17,8,18,2);ctx.fill();ctx.stroke();ctx.restore()}
 function heart(x,y){ctx.save();ctx.translate(x,y);ctx.beginPath();ctx.moveTo(0,22);ctx.bezierCurveTo(-12,12,-23,4,-23,-8);ctx.bezierCurveTo(-23,-24,-5,-24,0,-13);ctx.bezierCurveTo(5,-24,23,-24,23,-8);ctx.bezierCurveTo(23,4,12,12,0,22);ctx.closePath();ctx.fillStyle='#f9fff8';ctx.fill();ctx.strokeStyle='#141414';ctx.lineWidth=3;ctx.stroke();ctx.restore()}
 function drawFit(t,x,y,maxW,size,color,align='left',family='Arial',style='italic'){ctx.textAlign=align;ctx.fillStyle=color;while(size>15){ctx.font=`${style} ${size}px "${family}"`;if(ctx.measureText(t).width<=maxW)break;size--}ctx.fillText(t,x,y)}
-const PALETTES={vrakthar:'#674078',lichtreich:'#d4bc7b',mondreich:'#bfc1c8',handwerkerland:'#ae8971',hafenstadt:'#809fbd',nordkontinent:'#b9d9e9'};
+const PALETTES={vrakthar:'#674078',lichtreich:'#d4bc7b',mondreich:'#bfc1c8',handwerkerland:'#ae8971',hafenstadt:'#6e96bd',nordkontinent:'#9ecbe8'};
+const PRESET_BRIGHTNESS={vrakthar:100,lichtreich:50,mondreich:50,handwerkerland:50,hafenstadt:50,nordkontinent:75};
+function effectiveBrightness(){return V('palette')==='custom'?num('brightness'):(PRESET_BRIGHTNESS[V('palette')]??50)}
+function syncPaletteControls(){
+ const custom=V('palette')==='custom';
+ $('brightness').disabled=!custom;
+ $('frame').disabled=!custom;
+ if(!custom){$('frame').value=PALETTES[V('palette')];$('brightness').value=PRESET_BRIGHTNESS[V('palette')]}
+}
+
 function activeColor(){return PALETTES[V('palette')]||V('frame')}
 function frameTone(){
  const hex=activeColor().replace('#','');
  const rgb=[0,2,4].map(i=>parseInt(hex.slice(i,i+2),16));
  // Only the inset/name/panel accents are tinted; the outer frame stays dark grey.
- const strength=.20+num('brightness')/100*.52;
+ const strength=.20+effectiveBrightness()/100*.52;
  return 'rgb('+rgb.map(c=>Math.round(15*(1-strength)+c*strength)).join(',')+')';
 }
 function lightTone(){
@@ -44,7 +53,9 @@ function render(){
  const W=791,H=1087;C.width=W;C.height=H;ctx.clearRect(0,0,W,H);
  ctx.fillStyle='#29292e';ctx.fillRect(0,0,W,H);
  rounded(8,8,775,1071,37,'#29292e','#8c8990',5);rounded(21,19,749,1048,29,frameColor,'#eee',2);
- rounded(32,30,725,72,26,lightTone(),'#e5e5e5',2);
+ const nameBase=frameColor.match(/\d+/g).map(Number);
+ const nameDark='rgb('+nameBase.map(c=>Math.round(c*.72)).join(',')+')';
+ rounded(32,30,725,72,26,nameDark,'#e5e5e5',2);
  drawFit(V('name'),70,78,590,num('nameFont'),'#fff','left',V('titleFamily'));
  // Artwork: square-corner image bounds are clipped with a rounded path, under a thin white frame.
  rounded(30,113,731,608,26,'#29292e','#e5e5e5',2);
@@ -53,10 +64,10 @@ function render(){
  else{ctx.fillStyle='#695777';ctx.fillRect(33,116,725,602);drawFit('Artwork hochladen',395,415,600,32,'#fff','center')}
  ctx.restore();
  // The top-right circle is a role icon, not the combat-type label.
- rounded(660,18,96,96,48,'#202026','#c8c7cb',2.5);
- ctx.save();ctx.beginPath();ctx.arc(708,66,42,0,Math.PI*2);ctx.clip();
- if(roleIcon){const k=Math.min(76/roleIcon.width,76/roleIcon.height)*num('iconZoom')/100*(V('presetRole')==='nahkaempfer'?.77:1);const iw=roleIcon.width*k,ih=roleIcon.height*k;ctx.drawImage(roleIcon,708-iw/2,66-ih/2,iw,ih);}
- else drawFit('◆',708,81,55,46,'#49bdf4','center','Arial','bold');ctx.restore();
+ rounded(668,18,96,96,48,'#202026','#c8c7cb',2.5);
+ ctx.save();ctx.beginPath();ctx.arc(716,66,42,0,Math.PI*2);ctx.clip();
+ if(roleIcon){const k=Math.min(76/roleIcon.width,76/roleIcon.height)*num('iconZoom')/100*(V('presetRole')==='nahkaempfer'?.77:1);const iw=roleIcon.width*k,ih=roleIcon.height*k;ctx.drawImage(roleIcon,716-iw/2,66-ih/2,iw,ih);}
+ else drawFit('◆',716,81,55,46,'#49bdf4','center','Arial','bold');ctx.restore();
  // Resolution-independent stat bars: crisp at preview and PDF/PNG export.
  function statBar(x,y,w,h,colors){
   const pts=[[x+19,y],[x+w-19,y],[x+w,y+h/2],[x+w-19,y+h],[x+19,y+h],[x,y+h/2]];
@@ -69,7 +80,11 @@ function render(){
  statBar(30,687,204,65,['#ff858c','#ed1227','#9c0012']);
  statBar(557,687,204,65,['#a8ff91','#20e73b','#05781b']);
  statBar(290,690,211,60,['#57575b','#343437','#17171a']);
- function iconContain(im,cx,cy,mw,mh){const k=Math.min(mw/im.width,mh/im.height);ctx.drawImage(im,cx-im.width*k/2,cy-im.height*k/2,im.width*k,im.height*k)}
+ function iconContain(im,cx,cy,mw,mh){
+ const k=Math.min(mw/im.width,mh/im.height),w=im.width*k,h=im.height*k;
+ ctx.save();ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+ ctx.drawImage(im,Math.round(cx-w/2),Math.round(cy-h/2),w,h);ctx.restore();
+}
  if(badgeImages.swordSymbol)iconContain(badgeImages.swordSymbol,88,719,46,48);else sword(88,721);
  if(badgeImages.heartSymbol)iconContain(badgeImages.heartSymbol,716,719,52,48);else heart(710,721);
  drawFit(V('attack'),170,737,100,52,'white','center','Arial','bold');
@@ -146,8 +161,8 @@ function render(){
 
 }
 for(const id of ids)$(id).addEventListener('input',render);
-$('frame').addEventListener('input',()=>{$('palette').value='custom';render()});
-$('palette').addEventListener('change',()=>{if(PALETTES[V('palette')])$('frame').value=PALETTES[V('palette')];render()});function readImage(id,cb){$(id).onchange=()=>{let f=$(id).files[0];if(!f)return;let url=URL.createObjectURL(f),im=new Image();im.onload=()=>{cb(im);URL.revokeObjectURL(url);render()};im.src=url;let reader=new FileReader();reader.onload=()=>{if(id==='art')artData=reader.result;else iconData=reader.result};reader.readAsDataURL(f)}}readImage('art',im=>artwork=im);readImage('icon',im=>roleIcon=im);$('crest').onchange=()=>{const file=$('crest').files[0];if(!file)return;const reader=new FileReader();reader.onload=async()=>{crestData=reader.result;crestImage=await loadEmbedded(crestData);render()};reader.readAsDataURL(file)};
+$('frame').addEventListener('input',()=>{render()});
+$('palette').addEventListener('change',()=>{syncPaletteControls();render()});function readImage(id,cb){$(id).onchange=()=>{let f=$(id).files[0];if(!f)return;let url=URL.createObjectURL(f),im=new Image();im.onload=()=>{cb(im);URL.revokeObjectURL(url);render()};im.src=url;let reader=new FileReader();reader.onload=()=>{if(id==='art')artData=reader.result;else iconData=reader.result};reader.readAsDataURL(f)}}readImage('art',im=>artwork=im);readImage('icon',im=>roleIcon=im);$('crest').onchange=()=>{const file=$('crest').files[0];if(!file)return;const reader=new FileReader();reader.onload=async()=>{crestData=reader.result;crestImage=await loadEmbedded(crestData);render()};reader.readAsDataURL(file)};
 async function selectRoleIcon(key){if(!key)return;const paths=['/editor-assets/Role-Icons/'+key+'.png','/role-icons/'+key+'.png','/editor-assets/role-icons/'+key+'.png'];let response=null;
  for(const url of paths){try{const r=await fetch(url,{cache:'no-store'});if(r.ok){response=r;break}}catch(e){}}
  if(!response)throw Error('Icon nicht geladen. Bitte prüfe den Ordner public/editor-assets/Role-Icons oder public/role-icons.');const blob=await response.blob();const reader=new FileReader();reader.onload=async()=>{iconData=reader.result;roleIcon=await loadEmbedded(iconData);render()};reader.readAsDataURL(blob)}
@@ -155,7 +170,7 @@ $('presetRole').addEventListener('change',()=>selectRoleIcon($('presetRole').val
 document.querySelectorAll('#roleChoices button').forEach(btn=>btn.addEventListener('click',()=>{$('presetRole').value=btn.dataset.icon;selectRoleIcon(btn.dataset.icon).catch(e=>alert(e.message))}));
 
 $('download').onclick=()=>{render();let out=document.createElement('canvas'),mm=$('bleed').checked?num('bleedMm'):0,b=Math.round(mm/25.4*300);out.width=C.width+2*b;out.height=C.height+2*b;let c=out.getContext('2d');c.fillStyle='#29292e';c.fillRect(0,0,out.width,out.height);c.drawImage(C,b,b);out.toBlob(blob=>{let url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=(V('name').replace(/[^\wäöüÄÖÜ-]+/g,'_')||'TCG_Karte')+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),3000)},'image/png')};$('downloadPdf').onclick=()=>{render();const mm=$('bleed').checked?num('bleedMm'):0;const w=67+mm*2,h=92+mm*2;const src=C.toDataURL('image/png');const win=window.open('','_blank');if(!win){alert('Bitte Pop-ups für den PDF-Export erlauben.');return;}win.document.write(`<!doctype html><html><head><meta name=viewport content="width=device-width,initial-scale=1"><style>@page{size:${w}mm ${h}mm;margin:0}html,body{margin:0;padding:0;width:${w}mm;height:${h}mm}img{display:block;position:absolute;left:${mm}mm;top:${mm}mm;width:67mm;height:92mm}body{background:#29292e}</style></head><body><img src="${src}"><script>const pic=document.querySelector('img');pic.onload=()=>setTimeout(()=>window.print(),350);if(pic.complete)pic.onload()<\/script></body></html>`);win.document.close()};
-$('save').onclick=()=>{let obj={version:3,artData,iconData,crestData,settings:Object.fromEntries(ids.map(id=>[id,$(id).type==='checkbox'?$(id).checked:V(id)]))};let a=document.createElement('a'),url=URL.createObjectURL(new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}));a.href=url;a.download='tcg-kartenprojekt.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),2000)};$('load').onclick=()=>{let i=document.createElement('input');i.type='file';i.accept='.json';i.onchange=async()=>{try{let obj=JSON.parse(await i.files[0].text());for(const [id,val] of Object.entries(obj.settings||{}))if($(id)){$(id).type==='checkbox'?$(id).checked=!!val:$(id).value=val}if(obj.artData){artData=obj.artData;artwork=await loadEmbedded(obj.artData)}if(obj.iconData){iconData=obj.iconData;roleIcon=await loadEmbedded(obj.iconData)}if(obj.crestData){crestData=obj.crestData;crestImage=await loadEmbedded(obj.crestData)}render()}catch(e){alert('Projekt konnte nicht geladen werden: '+e.message)}};i.click()};render();
+$('save').onclick=()=>{let obj={version:3,artData,iconData,crestData,settings:Object.fromEntries(ids.map(id=>[id,$(id).type==='checkbox'?$(id).checked:V(id)]))};let a=document.createElement('a'),url=URL.createObjectURL(new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}));a.href=url;a.download='tcg-kartenprojekt.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),2000)};$('load').onclick=()=>{let i=document.createElement('input');i.type='file';i.accept='.json';i.onchange=async()=>{try{let obj=JSON.parse(await i.files[0].text());for(const [id,val] of Object.entries(obj.settings||{}))if($(id)){$(id).type==='checkbox'?$(id).checked=!!val:$(id).value=val}if(obj.artData){artData=obj.artData;artwork=await loadEmbedded(obj.artData)}if(obj.iconData){iconData=obj.iconData;roleIcon=await loadEmbedded(obj.iconData)}if(obj.crestData){crestData=obj.crestData;crestImage=await loadEmbedded(obj.crestData)}syncPaletteControls();render()}catch(e){alert('Projekt konnte nicht geladen werden: '+e.message)}};i.click()};syncPaletteControls();render();
 
 function loadEmbedded(src){return new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=reject;im.src=src})}
 $('toLibrary').onclick=async()=>{
