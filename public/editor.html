@@ -55,53 +55,26 @@ function lightTone(){
  const base=frameTone().match(/\d+/g).map(Number);
  return 'rgb('+base.map((c,i)=>Math.min(255,Math.round(c*.74+rgb[i]*.26+20))).join(',')+')';
 }
+// Artwork-derived glow texture, not procedurally approximated curves.
+const frameGlow=new Image();let frameGlowReady=false;
+frameGlow.onload=()=>{frameGlowReady=true;render()};
+frameGlow.src='editor-assets/frame-glow.png';
 function drawFrameShimmer(full){
- if(!$('frameShimmer').checked)return;
- const hex=activeColor().replace('#','');
- const rgb=[0,2,4].map(i=>parseInt(hex.slice(i,i+2),16));
- const lit=rgb.map(v=>Math.min(255,Math.round(v*.28+255*.72)));
- const glow=a=>`rgba(${lit.join(',')},${a})`;
- // Draw only within the colored inner border. The two outermost
- // dark-gray outlines and the artwork/text panels stay untouched.
+ if(!$('frameShimmer').checked||!frameGlowReady)return;
+ const tint=activeColor();
+ // Recolor the original violet glow to the selected card palette.
+ const off=document.createElement('canvas');off.width=791;off.height=1087;
+ const g=off.getContext('2d');g.drawImage(frameGlow,0,0,791,1087);
+ g.globalCompositeOperation='source-atop';g.fillStyle=tint;g.globalAlpha=.48;
+ g.fillRect(0,0,791,1087);g.globalAlpha=1;g.globalCompositeOperation='source-over';
  ctx.save();
- ctx.beginPath();ctx.roundRect(29,27,735,1034,28);
- ctx.roundRect(47,47,699,994,18);
- ctx.clip('evenodd');
- const strokes=[
-  [[20,188],[50,12],[288,22]],
-  [[500,18],[710,2],[767,165]],
-  [[22,885],[60,1070],[300,1054]],
-  [[496,1050],[735,1073],[767,868]],
-  [[30,490],[48,407],[55,329]],
-  [[738,790],[754,679],[765,590]],
-  [[100,30],[205,57],[335,29]],
-  [[458,1053],[620,1028],[714,1052]]
- ];
- for(const points of strokes){
-  for(const [width,alpha,blur] of [[24,.26,16],[12,.55,9],[4,.92,5]]){
-   ctx.beginPath();ctx.moveTo(...points[0]);ctx.quadraticCurveTo(...points[1],...points[2]);
-   ctx.lineCap='round';ctx.strokeStyle=width===4?'rgba(255,255,255,.90)':glow(alpha);
-   ctx.lineWidth=width;ctx.shadowColor=glow(.9);ctx.shadowBlur=blur;ctx.stroke();
-  }
- }
- ctx.shadowBlur=0;
- // Small glints, clipped to the same inner border.
- for(const [x,y,r] of [[77,48,8],[694,45,7],[42,354,6],[751,705,7],[91,1044,7],[694,1040,9]]){
-  const star=ctx.createRadialGradient(x,y,0,x,y,r*3);
-  star.addColorStop(0,'rgba(255,255,255,.95)');star.addColorStop(.15,glow(.8));star.addColorStop(1,glow(0));
-  ctx.fillStyle=star;ctx.fillRect(x-r*3,y-r*3,r*6,r*6);
- }
- ctx.restore();
- // Include the horizontal colored bridge between the artwork and text panel.
- ctx.save();ctx.beginPath();ctx.rect(45,746,701,13);ctx.clip();
- const bridge=ctx.createLinearGradient(45,0,746,0);
- bridge.addColorStop(0,glow(.08));bridge.addColorStop(.22,glow(.86));
- bridge.addColorStop(.48,'rgba(255,255,255,.72)');bridge.addColorStop(.75,glow(.86));
- bridge.addColorStop(1,glow(.08));
- ctx.fillStyle=bridge;ctx.fillRect(45,751,701,5);
- ctx.strokeStyle=glow(.8);ctx.lineWidth=2;ctx.shadowColor=glow(.9);ctx.shadowBlur=9;
- ctx.beginPath();ctx.moveTo(45,755);ctx.quadraticCurveTo(395,749,746,755);ctx.stroke();
- ctx.restore();
+ // Two outermost outlines are protected; only the colored inner band is decorated.
+ ctx.beginPath();ctx.roundRect(28,26,735,1035,27);
+ ctx.roundRect(47,47,699,994,18);ctx.clip('evenodd');
+ ctx.globalAlpha=.92;ctx.drawImage(off,0,0);ctx.restore();
+ // The center horizontal bridge is deliberately included.
+ ctx.save();ctx.beginPath();ctx.rect(43,738,705,23);ctx.clip();
+ ctx.globalAlpha=.85;ctx.drawImage(off,0,0);ctx.restore();
 }
 
 function render(){
